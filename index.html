@@ -831,19 +831,27 @@
       });
     }
 
-    function saveDB() {
+  function saveDB() {
       try {
         localStorage.setItem('agentepro_db', JSON.stringify(db));
-        firestore.collection("crm_data").doc("main_db").set(db)
+        
+        // CORRETTO: Punta alla collezione e al documento giusti
+        firestore.collection("agente_data").doc("main_store").set(db)
           .then(() => {
-            document.getElementById('cloud-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
+            const statusEl = document.getElementById('cloud-status');
+            if(statusEl) {
+              statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
+            }
           })
           .catch((err) => {
             console.error("Errore salvataggio Cloud:", err);
-            document.getElementById('cloud-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Errore Sync';
+            const statusEl = document.getElementById('cloud-status');
+            if(statusEl) {
+              statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Errore Sync';
+            }
           });
       } catch(e) {
-        alert("Errore durante il salvataggio dei dati.");
+        console.error("Errore locale:", e);
       }
     }
 
