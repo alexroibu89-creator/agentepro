@@ -735,9 +735,15 @@
           <textarea id="note-items" rows="5" placeholder="Spedire listino prezzi&#10;Ordinare cataloghi&#10;Verificare bonifico" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none"></textarea>
           <p class="text-[11px] text-slate-400 mt-1">Ogni riga diventerà un elemento spuntabile nella lista.</p>
         </div>
-        <div class="pt-4 flex justify-end space-x-3">
-          <button type="button" onclick="closeModal('modal-note')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-yellow-500 text-slate-900 font-semibold text-sm hover:bg-yellow-400 shadow-sm">Salva Nota</button>
+     <div class="pt-4 flex justify-between items-center">
+          <button type="button" onclick="deleteCurrentEvent()" class="px-4 py-2.5 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 shadow-sm">
+            <i class="fa-solid fa-trash mr-1"></i> Elimina
+          </button>
+          
+          <div class="space-x-3">
+            <button type="button" onclick="closeModal('modal-event')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
+            <button type="submit" class="px-5 py-2.5 rounded-xl bg-yellow-500 text-slate-900 font-semibold text-sm hover:bg-yellow-400 shadow-sm">Salva & Apri in Google Cal</button>
+          </div>
         </div>
       </form>
     </div>
@@ -1725,7 +1731,21 @@
       
       openGoogleCalendar(savedEvent);
     }
-
+function deleteCurrentEvent() {
+      const id = document.getElementById('event-id').value;
+      if (!id) {
+        alert("Nessun evento da eliminare.");
+        return;
+      }
+      
+      if (confirm("Sei sicuro di voler eliminare questo appuntamento?")) {
+        db.events = db.events.filter(x => x.id !== id);
+        saveDB();
+        closeModal('modal-event');
+        renderCalendar();
+        renderDashboard();
+      }
+    }
     window.onload = function() {
       newQuote();
       populateMatrixFilter();
