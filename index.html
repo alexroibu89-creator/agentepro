@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgentePro Enterprise v12.8 - CRM Plurimandatario</title>
+  <title>AgentePro Enterprise v12.9 - CRM Plurimandatario</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -39,7 +39,7 @@
           </div>
           <div>
             <h1 class="font-bold text-white text-lg tracking-wide">AgentePro</h1>
-            <p class="text-xs text-blue-400 font-medium">Enterprise CRM v12.8</p>
+            <p class="text-xs text-blue-400 font-medium">Enterprise CRM v12.9</p>
           </div>
         </div>
         <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white p-2">
@@ -154,7 +154,7 @@
               <span>Imposta Target</span>
             </button>
 
-            <!-- DASHBOARD FILTERS (INCLUSA AZIENDA MANDANTE) -->
+            <!-- DASHBOARD FILTERS -->
             <div class="flex flex-wrap items-center gap-2">
               <select id="dash-province" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option value="ALL">Tutte le Province</option>
@@ -462,12 +462,12 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="mandates-grid"></div>
       </section>
 
-      <!-- CALENDAR TAB (CON SELEZIONE RAPIDA MESE/ANNO E CASELLE AMPLIE E ORIZZONTALI) -->
+      <!-- CALENDAR TAB (LAYOUT RESPONSIVE MOBILE PERFETTO) -->
       <section id="tab-calendar" class="space-y-6 hidden">
         <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
           <div>
             <h2 class="text-2xl font-bold text-slate-900">Agenda Appuntamenti & Google Calendar</h2>
-            <p class="text-sm text-slate-500">Seleziona velocemente Mese e Anno oppure clicca su un giorno per aggiungere/modificare appuntamenti</p>
+            <p class="text-sm text-slate-500">Seleziona Mese e Anno oppure aggiungi nuovi appuntamenti in agenda</p>
           </div>
           <div class="flex items-center space-x-3">
             <button onclick="openModal('modal-event')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
@@ -478,10 +478,10 @@
         </div>
 
         <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
-          <!-- HEADER CALENDARIO: CONTROLLI VELOCI MESE ED ANNO -->
+          <!-- CONTROLLI VELOCI MESE ED ANNO -->
           <div class="flex flex-wrap justify-between items-center gap-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-start">
-              <button onclick="changeMonth(-1)" class="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition-colors shadow-sm">
+              <button onclick="changeMonth(-1)" class="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition-colors shadow-sm">
                 <i class="fa-solid fa-chevron-left"></i>
               </button>
 
@@ -511,7 +511,7 @@
                 </select>
               </div>
 
-              <button onclick="changeMonth(1)" class="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition-colors shadow-sm">
+              <button onclick="changeMonth(1)" class="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition-colors shadow-sm">
                 <i class="fa-solid fa-chevron-right"></i>
               </button>
             </div>
@@ -523,12 +523,13 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+          <!-- TESTATA GIORNI SETTIMANA (Solo per vista desktop) -->
+          <div class="hidden md:grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
             <div>LUN</div><div>MAR</div><div>MER</div><div>GIO</div><div>VEN</div><div>SAB</div><div>DOM</div>
           </div>
           
-          <!-- GRIGLIA CALENDARIO ADATTIVA ED ESTESA IN ORIZZONTALE -->
-          <div class="grid grid-cols-7 gap-1.5 md:gap-3" id="calendar-days-grid"></div>
+          <!-- CONTENITORE GRIGLIA / LISTA -->
+          <div id="calendar-days-grid" class="space-y-3 md:space-y-0 md:grid md:grid-cols-7 md:gap-3"></div>
         </div>
       </section>
 
@@ -786,7 +787,7 @@
 
   <!-- SCRIPT LOGIC -->
   <script>
-    // Configurazione Firebase Cloud (Sincronizzazione automatica universale)
+    // Configurazione Firebase Cloud
     const firebaseConfig = {
       apiKey: "AIzaSyAbamy2sRrHZedyEEU4lrQTlpGYvlXvFyM",
       authDomain: "agenteprosync.firebaseapp.com",
@@ -841,9 +842,8 @@
     ];
 
     let db = defaultData;
-    let currentCalendarDate = new Date(); // Gestione mese/anno corrente per il calendario
+    let currentCalendarDate = new Date();
 
-    // Gestione apertura/chiusura menu mobile
     function toggleSidebar() {
       const sidebar = document.getElementById('app-sidebar');
       const overlay = document.getElementById('sidebar-overlay');
@@ -851,7 +851,6 @@
       overlay.classList.toggle('hidden');
     }
 
-    // Sincronizzazione in tempo reale con Firestore
     function initCloudSync() {
       firestore.collection("agente_data").doc("main_store").onSnapshot((doc) => {
         if (doc.exists) {
@@ -876,20 +875,15 @@
     function saveDB() {
       try {
         localStorage.setItem('agentepro_db', JSON.stringify(db));
-        
         firestore.collection("agente_data").doc("main_store").set(db)
           .then(() => {
             const statusEl = document.getElementById('cloud-status');
-            if(statusEl) {
-              statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
-            }
+            if(statusEl) statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
           })
           .catch((err) => {
             console.error("Errore salvataggio Cloud:", err);
             const statusEl = document.getElementById('cloud-status');
-            if(statusEl) {
-              statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Errore Sync';
-            }
+            if(statusEl) statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Errore Sync';
           });
       } catch(e) {
         console.error("Errore locale:", e);
@@ -1431,7 +1425,7 @@
     }
 
     function deleteMandate(id) {
-      if(confirm("Eliminare mandante?")) { db.mandates = db.mandates.filter(m => m.id !== id); saveDB(); renderMandates(); }
+      if(confirm("Eliminare mandante?")) { db.mandates = db.mandates.filter(m => m.id !== id); saveDB(); renderMandates(); populateDashboardFilters(); }
     }
 
     // Notes & Tasks (Keep Style)
@@ -1521,7 +1515,9 @@
       }
     }
 
-    // Calendar Navigation & Rendering Dinamico Avanzato
+    // CALENDARIO RESPONSIVE CON VISTA LISTA SU MOBILE E GRIGLIA SU DESKTOP
+    const weekDayNamesShort = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+
     function changeMonth(direction) {
       currentCalendarDate.setMonth(currentCalendarDate.getMonth() + direction);
       renderCalendar();
@@ -1544,7 +1540,6 @@
       const year = currentCalendarDate.getFullYear();
       const month = currentCalendarDate.getMonth();
 
-      // Sincronizza i selettori dropdown
       const selM = document.getElementById('cal-month-select');
       const selY = document.getElementById('cal-year-select');
       if(selM) selM.value = month;
@@ -1553,49 +1548,102 @@
       const grid = document.getElementById('calendar-days-grid');
       grid.innerHTML = '';
 
-      const firstDayIndex = new Date(year, month, 1).getDay();
-      const startingDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+      const isMobile = window.innerWidth < 768;
       const totalDays = new Date(year, month + 1, 0).getDate();
-      const prevTotalDays = new Date(year, month, 0).getDate();
 
-      // Giorni mese precedente
-      for (let i = startingDay - 1; i >= 0; i--) {
-        const dayNum = prevTotalDays - i;
-        grid.innerHTML += `<div class="bg-slate-50/50 border border-slate-100 rounded-xl p-2 min-h-[100px] md:min-h-[120px] opacity-40">
-          <div class="text-right font-bold text-xs text-slate-400">${dayNum}</div>
-        </div>`;
-      }
+      if (isMobile) {
+        // VISTA MOBILE: LISTA GIORNO PER GIORNO ORIZZONTALE E BEN LEGGIBILE
+        for (let day = 1; day <= totalDays; day++) {
+          const monthStr = (month + 1) < 10 ? '0' + (month + 1) : (month + 1);
+          const dayStr = day < 10 ? '0' + day : day;
+          const dateStr = `${year}-${monthStr}-${dayStr}`;
 
-      // Giorni del mese corrente (estesi in orizzontale e ampi)
-      for(let day = 1; day <= totalDays; day++) {
-        const monthStr = (month + 1) < 10 ? '0' + (month + 1) : (month + 1);
-        const dayStr = day < 10 ? '0' + day : day;
-        const dateStr = `${year}-${monthStr}-${dayStr}`;
+          const dateObj = new Date(year, month, day);
+          const dayName = weekDayNamesShort[dateObj.getDay()];
 
-        const dayEvents = db.events.filter(e => e.date === dateStr);
-        let eventsHtml = dayEvents.map(ev => {
-          const client = db.clients.find(c => c.id === ev.clientId) || { name: 'Cliente' };
-          return `
-            <div onclick="event.stopPropagation(); editEvent('${ev.id}')" class="text-[10px] md:text-xs p-1.5 rounded-lg font-semibold truncate cursor-pointer shadow-sm ${ev.status === 'Completato' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200' : 'bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200'} mb-1.5 transition-all flex items-center justify-between" title="${client.name}: ${ev.notes}">
-              <span class="truncate"><strong>${ev.time || ''}</strong> ${client.name}</span>
-              <i class="fa-solid fa-chevron-right text-[8px] opacity-60 ml-1 shrink-0"></i>
+          const dayEvents = db.events.filter(e => e.date === dateStr);
+          const todayObj = new Date();
+          const isToday = (day === todayObj.getDate() && month === todayObj.getMonth() && year === todayObj.getFullYear());
+
+          let eventsHtml = dayEvents.map(ev => {
+            const client = db.clients.find(c => c.id === ev.clientId) || { name: 'Cliente', city: '' };
+            return `
+              <div onclick="event.stopPropagation(); editEvent('${ev.id}')" class="p-3 rounded-xl border font-semibold ${ev.status === 'Completato' ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-blue-50 text-blue-900 border-blue-200'} shadow-sm flex items-center justify-between">
+                <div class="min-w-0 pr-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded ${ev.status === 'Completato' ? 'bg-emerald-200 text-emerald-800' : 'bg-blue-200 text-blue-800'}">${ev.time || '09:00'}</span>
+                    <h4 class="font-bold text-sm truncate">${client.name}</h4>
+                  </div>
+                  <p class="text-xs text-slate-600 mt-1 line-clamp-2">${ev.notes}</p>
+                </div>
+                <i class="fa-solid fa-pen-to-square text-slate-400 text-sm shrink-0"></i>
+              </div>
+            `;
+          }).join('');
+
+          const borderBg = isToday ? 'bg-blue-50/40 border-blue-500 ring-2 ring-blue-400/30' : 'bg-white border-slate-200';
+
+          grid.innerHTML += `
+            <div onclick="openModalForDate('${dateStr}')" class="p-4 rounded-2xl border ${borderBg} shadow-sm space-y-3 cursor-pointer">
+              <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <div class="flex items-center space-x-2">
+                  <span class="text-sm font-bold text-slate-400 uppercase tracking-wide">${dayName}</span>
+                  <span class="text-base font-bold ${isToday ? 'bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center' : 'text-slate-900'}">${day}</span>
+                </div>
+                <button onclick="event.stopPropagation(); openModalForDate('${dateStr}')" class="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center space-x-1 bg-blue-50 px-2.5 py-1 rounded-lg">
+                  <i class="fa-solid fa-plus text-[10px]"></i>
+                  <span>Aggiungi</span>
+                </button>
+              </div>
+              <div class="space-y-2">
+                ${eventsHtml || '<p class="text-xs text-slate-400 italic py-1">Nessun appuntamento.</p>'}
+              </div>
             </div>
           `;
-        }).join('');
+        }
+      } else {
+        // VISTA DESKTOP: CLASSICA GRIGLIA A 7 COLONNE
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const startingDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+        const prevTotalDays = new Date(year, month, 0).getDate();
 
-        const todayObj = new Date();
-        const isToday = (day === todayObj.getDate() && month === todayObj.getMonth() && year === todayObj.getFullYear());
-        const borderClass = isToday ? 'border-blue-500 bg-blue-50/20 ring-2 ring-blue-400/40' : 'border-slate-200 bg-slate-50';
+        for (let i = startingDay - 1; i >= 0; i--) {
+          const dayNum = prevTotalDays - i;
+          grid.innerHTML += `<div class="bg-slate-50/50 border border-slate-100 rounded-xl p-2 min-h-[120px] opacity-40">
+            <div class="text-right font-bold text-xs text-slate-400">${dayNum}</div>
+          </div>`;
+        }
 
-        grid.innerHTML += `
-          <div ondblclick="openModalForDate('${dateStr}')" class="${borderClass} border rounded-xl p-2 min-h-[100px] md:min-h-[120px] flex flex-col justify-between hover:bg-blue-50/50 hover:border-blue-300 transition-all cursor-pointer group shadow-sm" title="Doppio click per aggiungere appuntamento">
-            <div class="flex justify-between items-center mb-1">
-              <span class="text-[9px] text-blue-600 font-bold hidden md:inline opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-plus mr-1"></i>Aggiungi</span>
-              <div class="text-right font-bold text-xs ${isToday ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center ml-auto' : 'text-slate-600 w-full md:w-auto'}">${day}</div>
+        for(let day = 1; day <= totalDays; day++) {
+          const monthStr = (month + 1) < 10 ? '0' + (month + 1) : (month + 1);
+          const dayStr = day < 10 ? '0' + day : day;
+          const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+          const dayEvents = db.events.filter(e => e.date === dateStr);
+          let eventsHtml = dayEvents.map(ev => {
+            const client = db.clients.find(c => c.id === ev.clientId) || { name: 'Cliente' };
+            return `
+              <div onclick="event.stopPropagation(); editEvent('${ev.id}')" class="text-xs p-1.5 rounded-lg font-semibold truncate cursor-pointer shadow-sm ${ev.status === 'Completato' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200' : 'bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200'} mb-1.5 transition-all flex items-center justify-between" title="${client.name}: ${ev.notes}">
+                <span class="truncate"><strong>${ev.time || ''}</strong> ${client.name}</span>
+                <i class="fa-solid fa-chevron-right text-[8px] opacity-60 ml-1 shrink-0"></i>
+              </div>
+            `;
+          }).join('');
+
+          const todayObj = new Date();
+          const isToday = (day === todayObj.getDate() && month === todayObj.getMonth() && year === todayObj.getFullYear());
+          const borderClass = isToday ? 'border-blue-500 bg-blue-50/20 ring-2 ring-blue-400/40' : 'border-slate-200 bg-slate-50';
+
+          grid.innerHTML += `
+            <div ondblclick="openModalForDate('${dateStr}')" class="${borderClass} border rounded-xl p-2 min-h-[120px] flex flex-col justify-between hover:bg-blue-50/50 hover:border-blue-300 transition-all cursor-pointer group shadow-sm" title="Doppio click per aggiungere appuntamento">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-[9px] text-blue-600 font-bold hidden md:inline opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-plus mr-1"></i>Aggiungi</span>
+                <div class="text-right font-bold text-xs ${isToday ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center ml-auto' : 'text-slate-600 w-full md:w-auto'}">${day}</div>
+              </div>
+              <div class="overflow-y-auto custom-scrollbar flex-1">${eventsHtml}</div>
             </div>
-            <div class="overflow-y-auto custom-scrollbar flex-1">${eventsHtml}</div>
-          </div>
-        `;
+          `;
+        }
       }
     }
 
@@ -1787,7 +1835,6 @@
       openGoogleCalendar(savedEvent);
     }
 
-    // Funzione di eliminazione appuntamento collegata al tasto rosso
     function deleteCurrentEvent() {
       const id = document.getElementById('event-id').value;
       if (!id) {
@@ -1803,6 +1850,13 @@
         renderDashboard();
       }
     }
+
+    window.addEventListener('resize', () => {
+      const activeSec = document.querySelector('main section:not(.hidden)');
+      if(activeSec && activeSec.id === 'tab-calendar') {
+        renderCalendar();
+      }
+    });
 
     window.onload = function() {
       newQuote();
