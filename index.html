@@ -1,1754 +1,484 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgentePro Enterprise v12.7 - CRM Plurimandatario</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Firebase SDK Compat per Cloud Sync -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    @media print {
-      aside, header, button, select, input, .no-print { display: none !important; }
-      main { width: 100% !important; overflow: visible !important; }
-      .bg-slate-100 { background: white !important; }
-    }
-  </style>
-</head>
-<body class="bg-slate-100 text-slate-800 flex h-screen overflow-hidden">
-
-  <!-- OVERLAY MOBILE PER CHIUDERE IL MENU -->
-  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
-
-  <!-- SIDEBAR NAVIGATION (Responsive a scomparsa) -->
-  <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 shadow-2xl transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300">
-    <div>
-      <div class="p-6 border-b border-slate-800 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <div class="bg-blue-600 text-white p-3 rounded-2xl shadow-lg">
-            <i class="fa-solid fa-briefcase text-xl"></i>
-          </div>
-          <div>
-            <h1 class="font-bold text-white text-lg tracking-wide">AgentePro</h1>
-            <p class="text-xs text-blue-400 font-medium">Enterprise CRM v12.7</p>
-          </div>
-        </div>
-        <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white p-2">
-          <i class="fa-solid fa-xmark text-xl"></i>
-        </button>
-      </div>
-
-      <!-- STATO CLOUD SYNC -->
-      <div class="px-6 py-2 bg-slate-950 flex items-center justify-between text-xs border-b border-slate-800">
-        <span class="text-slate-400">Cloud Sync:</span>
-        <span id="cloud-status" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium flex items-center gap-1">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Attivo
-        </span>
-      </div>
-
-      <nav class="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all text-white bg-blue-600 shadow-md">
-          <i class="fa-solid fa-chart-pie w-5 text-lg"></i>
-          <span>Dashboard & Target</span>
-        </button>
-        <button onclick="switchTab('previsit')" id="nav-previsit" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
-          <i class="fa-solid fa-magnifying-glass-chart w-5 text-lg text-amber-400"></i>
-          <span>Scheda Pre-Visita</span>
-        </button>
-        <button onclick="switchTab('clients')" id="nav-clients" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
-          <i class="fa-solid fa-users w-5 text-lg"></i>
-          <span>Clienti & Prospects</span>
-        </button>
-        <button onclick="switchTab('orders')" id="nav-orders" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
-          <i class="fa-solid fa-file-invoice-dollar w-5 text-lg"></i>
-          <span>Ordini & Provvigioni</span>
-        </button>
-        <button onclick="switchTab('mandates')" id="nav-mandates" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
-          <i class="fa-solid fa-building w-5 text-lg"></i>
-          <span>Aziende Mandanti</span>
-        </button>
-        <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
-          <i class="fa-solid fa-calendar-days w-5 text-lg"></i>
-          <span>Agenda & Google Cal</span>
-        </button>
-        <button onclick="switchTab('notes')" id="nav-notes" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
-          <i class="fa-solid fa-note-sticky w-5 text-lg text-yellow-400"></i>
-          <span>Note & Task (Keep)</span>
-        </button>
-      </nav>
-    </div>
-
-    <!-- BACKUP & DATA MANAGEMENT IN SIDEBAR -->
-    <div class="p-4 border-t border-slate-800 space-y-2">
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="exportBackup()" class="text-[11px] text-emerald-400 hover:text-emerald-300 py-2 px-2 border border-emerald-900/50 hover:border-emerald-700 rounded-xl transition-colors flex items-center justify-center space-x-1">
-          <i class="fa-solid fa-download"></i>
-          <span>Esporta</span>
-        </button>
-        <label class="text-[11px] text-amber-400 hover:text-amber-300 py-2 px-2 border border-amber-900/50 hover:border-amber-700 rounded-xl transition-colors flex items-center justify-center space-x-1 cursor-pointer">
-          <i class="fa-solid fa-upload"></i>
-          <span>Importa</span>
-          <input type="file" id="import-file" accept=".json" onchange="importBackup(event)" class="hidden">
-        </label>
-      </div>
-      <button onclick="resetData()" class="w-full text-[11px] text-rose-400 hover:text-rose-300 py-2 border border-rose-900/50 hover:border-rose-700 rounded-xl transition-colors flex items-center justify-center space-x-1.5">
-        <i class="fa-solid fa-rotate-left"></i>
-        <span>Ripristina Esempio</span>
-      </button>
-    </div>
-  </aside>
-
-  <!-- MAIN WORKSPACE -->
-  <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100">
-    
-    <!-- HEADER CON PULSANTE MENU MOBILE -->
-    <header class="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 text-white p-4 md:p-5 shadow-md flex items-center justify-between shrink-0">
-      <div class="flex items-center space-x-3 min-w-0">
-        <button onclick="toggleSidebar()" class="md:hidden bg-white/10 hover:bg-white/20 p-2.5 rounded-xl text-white transition-all shrink-0">
-          <i class="fa-solid fa-bars text-lg"></i>
-        </button>
-        <div class="bg-white/10 p-2.5 rounded-2xl backdrop-blur-md hidden sm:block shrink-0">
-          <i class="fa-solid fa-bolt text-amber-300 text-xl"></i>
-        </div>
-        <div class="min-w-0">
-          <p id="quote-text" class="italic text-xs md:text-sm font-semibold truncate">"La determinazione di oggi è il fatturato di domani."</p>
-          <p id="quote-author" class="text-[10px] text-blue-200 mt-0.5">— Filosofia Commerciale</p>
-        </div>
-      </div>
-      <button onclick="newQuote()" class="bg-white/10 hover:bg-white/20 text-xs px-3 py-2 rounded-xl backdrop-blur-md transition-all flex items-center space-x-1.5 border border-white/10 shrink-0 ml-2">
-        <i class="fa-solid fa-arrows-rotate"></i>
-        <span class="hidden sm:inline">Altra Frase</span>
-      </button>
-    </header>
-
-    <!-- CONTENT CONTAINER -->
-    <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar">
-
-      <!-- DASHBOARD TAB -->
-      <section id="tab-dashboard" class="space-y-6">
-        <div class="flex flex-wrap items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900">Dashboard Commerciale & Obiettivi</h2>
-            <p class="text-sm text-slate-500">Monitora KPI, target mensili/annuali ed esporta i report</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <button onclick="exportDashboardExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all flex items-center space-x-2">
-              <i class="fa-solid fa-file-excel"></i>
-              <span>Esporta Excel</span>
-            </button>
-            <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all flex items-center space-x-2">
-              <i class="fa-solid fa-print"></i>
-              <span>Stampa / PDF</span>
-            </button>
-            <button onclick="openModal('modal-target')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all flex items-center space-x-2">
-              <i class="fa-solid fa-bullseye"></i>
-              <span>Imposta Target</span>
-            </button>
-
-            <!-- DASHBOARD FILTERS -->
-            <div class="flex flex-wrap items-center gap-2">
-              <select id="dash-province" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="ALL">Tutte le Province</option>
-                <option value="MC">Macerata (MC)</option>
-                <option value="AN">Ancona (AN)</option>
-                <option value="PU">Pesaro-Urbino (PU)</option>
-                <option value="FM">Fermo (FM)</option>
-                <option value="AP">Ascoli Piceno (AP)</option>
-              </select>
-              <select id="dash-year" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="ALL">Tutti gli Anni</option>
-                <option value="2026" selected>2026</option>
-                <option value="2025">2025</option>
-              </select>
-              <select id="dash-month" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="ALL" selected>Tutto l'Anno</option>
-                <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option>
-                <option value="3">Aprile</option><option value="4">Maggio</option><option value="5">Giugno</option>
-                <option value="6">Luglio</option><option value="7">Agosto</option><option value="8">Settembre</option>
-                <option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- TARGET & OBIETTIVI PROGRESS SECTION -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-            <div class="flex justify-between items-center">
-              <div>
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Fatturato Annuale</p>
-                <h3 id="target-annual-text" class="text-xl font-bold text-slate-900">€ 0 / € 0</h3>
-              </div>
-              <span id="target-annual-percent" class="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">0%</span>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-              <div id="target-annual-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
-            </div>
-            <p id="target-annual-remaining" class="text-xs text-slate-500 italic">Mancano € 0 al completamento dell'obiettivo annuale.</p>
-          </div>
-
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-            <div class="flex justify-between items-center">
-              <div>
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Fatturato Mensile</p>
-                <h3 id="target-monthly-text" class="text-xl font-bold text-slate-900">€ 0 / € 0</h3>
-              </div>
-              <span id="target-monthly-percent" class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">0%</span>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-              <div id="target-monthly-bar" class="bg-indigo-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
-            </div>
-            <p id="target-monthly-remaining" class="text-xs text-slate-500 italic">Mancano € 0 al completamento dell'obiettivo mensile.</p>
-          </div>
-        </div>
-
-        <!-- STATS CARDS -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-            <div class="bg-blue-100 text-blue-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-chart-line"></i></div>
-            <div>
-              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fatturato Lordo</p>
-              <h3 id="stat-turnover" class="text-2xl font-bold text-slate-900">€ 0</h3>
-            </div>
-          </div>
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-            <div class="bg-emerald-100 text-emerald-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-sack-dollar"></i></div>
-            <div>
-              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Provvigioni Nette</p>
-              <h3 id="stat-commissions" class="text-2xl font-bold text-emerald-600">€ 0</h3>
-            </div>
-          </div>
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-            <div class="bg-indigo-100 text-indigo-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-store"></i></div>
-            <div>
-              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Clienti Attivi</p>
-              <h3 id="stat-clients" class="text-2xl font-bold text-slate-900">0</h3>
-            </div>
-          </div>
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-            <div class="bg-amber-100 text-amber-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-user-clock"></i></div>
-            <div>
-              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Prospect Aperti</p>
-              <h3 id="stat-prospects" class="text-2xl font-bold text-amber-600">0</h3>
-            </div>
-          </div>
-        </div>
-
-        <!-- ANALYTICS TABLES GRID -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-            <div class="flex justify-between items-center">
-              <h3 class="font-bold text-slate-900 text-base flex items-center">
-                <i class="fa-solid fa-building text-blue-600 mr-2"></i>Fatturato per Mandante
-              </h3>
-              <select id="sort-mandates" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-slate-50 font-medium">
-                <option value="desc">Fatturato: Decrescente</option>
-                <option value="asc">Fatturato: Crescente</option>
-                <option value="name">Nome: A-Z</option>
-              </select>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm text-slate-600">
-                <thead class="bg-slate-50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th class="p-3">Mandante</th>
-                    <th class="p-3 text-center">% Provv.</th>
-                    <th class="p-3 text-right">Fatturato Lordo</th>
-                    <th class="p-3 text-right">Provvigioni</th>
-                  </tr>
-                </thead>
-                <tbody id="dash-mandate-breakdown" class="divide-y divide-slate-100 text-xs"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-            <div class="flex justify-between items-center">
-              <h3 class="font-bold text-slate-900 text-base flex items-center">
-                <i class="fa-solid fa-users text-emerald-600 mr-2"></i>Fatturato per Cliente
-              </h3>
-              <select id="sort-clients" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-slate-50 font-medium">
-                <option value="desc">Fatturato: Decrescente</option>
-                <option value="asc">Fatturato: Crescente</option>
-                <option value="name">Nome: A-Z</option>
-              </select>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm text-slate-600">
-                <thead class="bg-slate-50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th class="p-3">Cliente</th>
-                    <th class="p-3">Provincia</th>
-                    <th class="p-3 text-right">Fatturato Lordo</th>
-                    <th class="p-3 text-right">Provvigioni</th>
-                  </tr>
-                </thead>
-                <tbody id="dash-client-breakdown" class="divide-y divide-slate-100 text-xs"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- MATRIX TABLE -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-          <div class="flex flex-wrap justify-between items-center gap-3">
-            <h3 class="font-bold text-slate-900 text-base flex items-center">
-              <i class="fa-solid fa-table-cells text-indigo-600 mr-2"></i>Analisi Incrociata (Cliente & Mandante)
-            </h3>
-            <div class="flex items-center space-x-2">
-              <select id="filter-matrix-mandate" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-slate-50 font-medium">
-                <option value="ALL">Tutte le Mandanti</option>
-              </select>
-              <select id="sort-matrix" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-slate-50 font-medium">
-                <option value="desc">Fatturato: Decrescente</option>
-                <option value="asc">Fatturato: Crescente</option>
-              </select>
-            </div>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-600">
-              <thead class="bg-slate-50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th class="p-3">Cliente</th>
-                  <th class="p-3">Azienda Mandante</th>
-                  <th class="p-3 text-center">N. Ordini</th>
-                  <th class="p-3 text-right">Fatturato Lordo</th>
-                  <th class="p-3 text-right">Provvigione Netta</th>
-                </tr>
-              </thead>
-              <tbody id="dash-matrix-breakdown" class="divide-y divide-slate-100 text-xs"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- PRE-VISIT HUB TAB -->
-      <section id="tab-previsit" class="space-y-6 hidden">
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900"><i class="fa-solid fa-clipboard-question text-amber-500 mr-2"></i>Centro Briefing Pre-Visita</h2>
-            <p class="text-sm text-slate-500">Cerca un cliente o prospect e consulta lo storico completo in ordine cronologico</p>
-          </div>
-          <div class="relative w-full md:w-80">
-            <input type="hidden" id="pv-selected-client-id">
-            <div class="relative">
-              <input type="text" id="pv-search-input" autocomplete="off" oninput="filterPrevisitClients(this.value)" placeholder="Cerca cliente per nome o città..." class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10">
-              <span class="absolute right-3.5 top-3.5 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-            </div>
-            <div id="pv-search-dropdown" class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 max-h-56 overflow-y-auto z-50 hidden custom-scrollbar"></div>
-          </div>
-        </div>
-
-        <div id="previsit-card-container" class="hidden space-y-6">
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6">
-              <span id="pv-type-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide"></span>
-              <h3 id="pv-name" class="text-xl font-bold text-slate-900 mt-2">--</h3>
-              <p id="pv-location" class="text-sm text-slate-500 mt-1"><i class="fa-solid fa-location-dot mr-1"></i>--</p>
-              <p id="pv-contact" class="text-sm text-slate-600 mt-1"><i class="fa-solid fa-user-tie mr-1"></i>--</p>
-              <p id="pv-vat" class="text-xs text-slate-400 mt-1">P.IVA: --</p>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Aziende Mandanti Abbinate</h4>
-              <div id="pv-mandates" class="flex flex-wrap gap-1.5"></div>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Fatturato Storico Totale</h4>
-              <p id="pv-turnover" class="text-2xl font-bold text-blue-600">€ 0</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-              <h4 class="font-bold text-slate-900 flex items-center justify-between">
-                <span><i class="fa-solid fa-comments text-blue-500 mr-2"></i>Storico Report & Colloqui</span>
-                <span class="text-xs text-slate-400 font-normal">Dal più recente</span>
-              </h4>
-              <div id="pv-reports-list" class="space-y-3 max-h-72 overflow-y-auto pr-2"></div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-              <h4 class="font-bold text-slate-900 flex items-center"><i class="fa-solid fa-file-invoice text-emerald-500 mr-2"></i>Storico Ordini Recenti</h4>
-              <div id="pv-orders-list" class="space-y-3 max-h-72 overflow-y-auto pr-2"></div>
-            </div>
-          </div>
-        </div>
-
-        <div id="previsit-empty" class="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-400">
-          <i class="fa-solid fa-magnifying-glass text-3xl mb-3 text-slate-300"></i>
-          <p class="text-base font-medium">Usa la barra di ricerca in alto per selezionare un cliente e visualizzare la scheda pre-visita.</p>
-        </div>
-      </section>
-
-      <!-- CLIENTS TAB -->
-      <section id="tab-clients" class="space-y-6 hidden">
-        <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900">Anagrafica Clienti & Prospects</h2>
-            <p class="text-sm text-slate-500">Gestisci i contatti divisi per provincia</p>
-          </div>
-          <button onclick="openModal('modal-client')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
-            <i class="fa-solid fa-user-plus"></i>
-            <span>+ Nuovo Cliente / Prospect</span>
-          </button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="clients-grid"></div>
-      </section>
-
-      <!-- ORDERS TAB -->
-      <section id="tab-orders" class="space-y-6 hidden">
-        <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900">Registro Ordini & Calcolo Provvigioni</h2>
-            <p class="text-sm text-slate-500">Registra o modifica le vendite</p>
-          </div>
-          <button onclick="openModal('modal-order')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
-            <i class="fa-solid fa-cart-plus"></i>
-            <span>+ Registra Ordine</span>
-          </button>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-            <span class="font-bold text-slate-700 text-sm">Elenco Storico Vendite</span>
-            <select id="order-filter-mandate" onchange="renderOrders()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-white font-medium">
-              <option value="ALL">Tutte le Mandanti</option>
-            </select>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-600">
-              <thead class="bg-slate-50 text-slate-400 uppercase text-[11px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th class="p-4">Data</th>
-                  <th class="p-4">Cliente</th>
-                  <th class="p-4">Provincia</th>
-                  <th class="p-4">Mandante</th>
-                  <th class="p-4 text-right">Importo Lordo</th>
-                  <th class="p-4 text-center">% Provv.</th>
-                  <th class="p-4 text-right">Provvigione €</th>
-                  <th class="p-4 text-center">Azioni</th>
-                </tr>
-              </thead>
-              <tbody id="table-orders-body" class="divide-y divide-slate-100"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- MANDATES TAB -->
-      <section id="tab-mandates" class="space-y-6 hidden">
-        <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900">Aziende Mandanti</h2>
-            <p class="text-sm text-slate-500">Gestisci i marchi rappresentati</p>
-          </div>
-          <button onclick="openModal('modal-mandate')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
-            <i class="fa-solid fa-building-circle-check"></i>
-            <span>+ Nuova Mandante</span>
-          </button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="mandates-grid"></div>
-      </section>
-
-      <!-- CALENDAR TAB -->
-      <section id="tab-calendar" class="space-y-6 hidden">
-        <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900">Agenda Appuntamenti & Google Calendar</h2>
-            <p class="text-sm text-slate-500">Naviga tra i mesi e clicca su un giorno per aggiungere un appuntamento</p>
-          </div>
-          <div class="flex items-center space-x-3">
-            <button onclick="openModal('modal-event')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
-              <i class="fa-solid fa-calendar-plus"></i>
-              <span>+ Nuovo Appuntamento</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div class="flex justify-between items-center mb-6">
-            <div class="flex items-center space-x-3">
-              <button onclick="changeMonth(-1)" class="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors shadow-sm">
-                <i class="fa-solid fa-chevron-left"></i>
-              </button>
-              <h3 class="text-xl font-bold text-slate-900 min-w-[200px] text-center" id="calendar-title">Novembre 2026</h3>
-              <button onclick="changeMonth(1)" class="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors shadow-sm">
-                <i class="fa-solid fa-chevron-right"></i>
-              </button>
-            </div>
-            <div class="flex items-center space-x-3">
-              <button onclick="goToToday()" class="text-xs bg-slate-100 hover:bg-slate-200 font-semibold px-3 py-2 rounded-xl text-slate-700 transition-colors">Oggi</button>
-              <span class="hidden sm:inline-flex items-center text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span> Completato</span>
-              <span class="hidden sm:inline-flex items-center text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"><span class="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span> Pianificato</span>
-            </div>
-          </div>
-          <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-            <div>LUN</div><div>MAR</div><div>MER</div><div>GIO</div><div>VEN</div><div>SAB</div><div>DOM</div>
-          </div>
-          <div class="grid grid-cols-7 gap-1 md:gap-2" id="calendar-days-grid"></div>
-        </div>
-      </section>
-
-      <!-- NOTES & TASK TAB (KEEP STYLE) -->
-      <section id="tab-notes" class="space-y-6 hidden">
-        <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900">Note & Task (Stile Keep)</h2>
-            <p class="text-sm text-slate-500">Crea note rapide e liste di cose da fare spuntabili</p>
-          </div>
-          <button onclick="openModal('modal-note')" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
-            <i class="fa-solid fa-plus"></i>
-            <span>+ Nuova Nota / Task</span>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="notes-grid"></div>
-      </section>
-
-    </div>
-  </main>
-
-  <!-- MODALS -->
-  <!-- MODAL: TARGET -->
-  <div id="modal-target" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
-        <h3 class="font-bold text-lg">Imposta Obiettivi di Fatturato</h3>
-        <button onclick="closeModal('modal-target')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-      </div>
-      <form onsubmit="saveTargets(event)" class="p-6 space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Target Fatturato Annuale (€) *</label>
-          <input type="number" step="1000" id="target-annual-input" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Target Fatturato Mensile (€) *</label>
-          <input type="number" step="500" id="target-monthly-input" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div class="pt-4 flex justify-end space-x-3">
-          <button type="button" onclick="closeModal('modal-target')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-sm">Salva Obiettivi</button>
-        </div>
-      </form>
-    </div>
+  <!-- STATO CLOUD SYNC -->
+  <div class="px-6 py-2 bg-slate-950 flex items-center justify-between text-xs border-b border-slate-800">
+    <span class="text-slate-400">Cloud Sync:</span>
+    <span id="cloud-status" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Attivo
+    </span>
   </div>
 
-  <!-- MODAL: MANDATE -->
-  <div id="modal-mandate" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
-        <h3 class="font-bold text-lg" id="modal-mandate-title">Azienda Mandante</h3>
-        <button onclick="closeModal('modal-mandate')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-      </div>
-      <form onsubmit="saveMandate(event)" class="p-6 space-y-4">
-        <input type="hidden" id="mandate-id">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Nome Mandante *</label>
-          <input type="text" id="mandate-name" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">% Provvigione Concordata *</label>
-          <input type="number" step="0.1" id="mandate-rate" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div class="pt-4 flex justify-end space-x-3">
-          <button type="button" onclick="closeModal('modal-mandate')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-sm">Salva Mandante</button>
-        </div>
-      </form>
+  <nav class="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
+    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all text-white bg-blue-600 shadow-md">
+      <i class="fa-solid fa-chart-pie w-5 text-lg"></i>
+      <span>Dashboard & Target</span>
+    </button>
+    <button onclick="switchTab('previsit')" id="nav-previsit" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
+      <i class="fa-solid fa-magnifying-glass-chart w-5 text-lg text-amber-400"></i>
+      <span>Scheda Pre-Visita</span>
+    </button>
+    <button onclick="switchTab('clients')" id="nav-clients" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
+      <i class="fa-solid fa-users w-5 text-lg"></i>
+      <span>Clienti & Prospects</span>
+    </button>
+    <button onclick="switchTab('orders')" id="nav-orders" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
+      <i class="fa-solid fa-file-invoice-dollar w-5 text-lg"></i>
+      <span>Ordini & Provvigioni</span>
+    </button>
+    <button onclick="switchTab('mandates')" id="nav-mandates" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
+      <i class="fa-solid fa-building w-5 text-lg"></i>
+      <span>Aziende Mandanti</span>
+    </button>
+    <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
+      <i class="fa-solid fa-calendar-days w-5 text-lg"></i>
+      <span>Agenda & Google Cal</span>
+    </button>
+    <button onclick="switchTab('notes')" id="nav-notes" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all hover:bg-slate-800 hover:text-white">
+      <i class="fa-solid fa-note-sticky w-5 text-lg text-yellow-400"></i>
+      <span>Note & Task (Keep)</span>
+    </button>
+  </nav>
+</div>
+
+<!-- BACKUP & DATA MANAGEMENT IN SIDEBAR -->
+<div class="p-4 border-t border-slate-800 space-y-2">
+  <div class="grid grid-cols-2 gap-2">
+    <button onclick="exportBackup()" class="text-[11px] text-emerald-400 hover:text-emerald-300 py-2 px-2 border border-emerald-900/50 hover:border-emerald-700 rounded-xl transition-colors flex items-center justify-center space-x-1">
+      <i class="fa-solid fa-download"></i>
+      <span>Esporta</span>
+    </button>
+    <label class="text-[11px] text-amber-400 hover:text-amber-300 py-2 px-2 border border-amber-900/50 hover:border-amber-700 rounded-xl transition-colors flex items-center justify-center space-x-1 cursor-pointer">
+      <i class="fa-solid fa-upload"></i>
+      <span>Importa</span>
+      <input type="file" id="import-file" accept=".json" onchange="importBackup(event)" class="hidden">
+    </label>
+  </div>
+  <button onclick="resetData()" class="w-full text-[11px] text-rose-400 hover:text-rose-300 py-2 border border-rose-900/50 hover:border-rose-700 rounded-xl transition-colors flex items-center justify-center space-x-1.5">
+    <i class="fa-solid fa-rotate-left"></i>
+    <span>Ripristina Esempio</span>
+  </button>
+</div>
+
+
+<!-- HEADER CON PULSANTE MENU MOBILE -->
+<header class="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 text-white p-4 md:p-5 shadow-md flex items-center justify-between shrink-0">
+  <div class="flex items-center space-x-3 min-w-0">
+    <button onclick="toggleSidebar()" class="md:hidden bg-white/10 hover:bg-white/20 p-2.5 rounded-xl text-white transition-all shrink-0">
+      <i class="fa-solid fa-bars text-lg"></i>
+    </button>
+    <div class="bg-white/10 p-2.5 rounded-2xl backdrop-blur-md hidden sm:block shrink-0">
+      <i class="fa-solid fa-bolt text-amber-300 text-xl"></i>
+    </div>
+    <div class="min-w-0">
+      <p id="quote-text" class="italic text-xs md:text-sm font-semibold truncate">"La determinazione di oggi è il fatturato di domani."</p>
+      <p id="quote-author" class="text-[10px] text-blue-200 mt-0.5">— Filosofia Commerciale</p>
     </div>
   </div>
+  <button onclick="newQuote()" class="bg-white/10 hover:bg-white/20 text-xs px-3 py-2 rounded-xl backdrop-blur-md transition-all flex items-center space-x-1.5 border border-white/10 shrink-0 ml-2">
+    <i class="fa-solid fa-arrows-rotate"></i>
+    <span class="hidden sm:inline">Altra Frase</span>
+  </button>
+</header>
 
-  <!-- MODAL: CLIENT -->
-  <div id="modal-client" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
-        <h3 class="font-bold text-lg" id="modal-client-title">Nuovo Cliente / Prospect</h3>
-        <button onclick="closeModal('modal-client')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+<!-- CONTENT CONTAINER -->
+<div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar">
+
+  <!-- DASHBOARD TAB -->
+  <section id="tab-dashboard" class="space-y-6">
+    <div class="flex flex-wrap items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900">Dashboard Commerciale & Obiettivi</h2>
+        <p class="text-sm text-slate-500">Monitora KPI, target e filtra per provincia, anno, mese o mandante</p>
       </div>
-      <form onsubmit="saveClient(event)" class="p-6 space-y-4">
-        <input type="hidden" id="client-id">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Stato Contatto *</label>
-            <select id="client-type" class="w-full border border-slate-300 rounded-xl p-3 text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              <option value="Cliente">Cliente Attivo</option>
-              <option value="Prospect">Prospect (Da Sviluppare)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Provincia *</label>
-            <select id="client-province" required class="w-full border border-slate-300 rounded-xl p-3 text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              <option value="MC">Macerata (MC)</option>
-              <option value="AN">Ancona (AN)</option>
-              <option value="PU">Pesaro-Urbino (PU)</option>
-              <option value="FM">Fermo (FM)</option>
-              <option value="AP">Ascoli Piceno (AP)</option>
-            </select>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Ragione Sociale *</label>
-            <input type="text" id="client-name" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Partita IVA (11 cifre)</label>
-            <input type="text" id="client-vat" maxlength="11" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Città *</label>
-            <input type="text" id="client-city" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Referente</label>
-            <input type="text" id="client-contact" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-2 uppercase">Aziende Mandanti Associate *</label>
-          <div id="client-mandates-boxes" class="space-y-2 max-h-32 overflow-y-auto p-3 border border-slate-200 rounded-xl bg-slate-50"></div>
-        </div>
-        <div class="pt-4 flex justify-end space-x-3">
-          <button type="button" onclick="closeModal('modal-client')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-sm">Salva Contatto</button>
-        </div>
-      </form>
-    </div>
-  </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button onclick="exportDashboardExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all flex items-center space-x-2">
+          <i class="fa-solid fa-file-excel"></i>
+          <span>Esporta Excel</span>
+        </button>
+        <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all flex items-center space-x-2">
+          <i class="fa-solid fa-print"></i>
+          <span>Stampa / PDF</span>
+        </button>
+        <button onclick="openModal('modal-target')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all flex items-center space-x-2">
+          <i class="fa-solid fa-bullseye"></i>
+          <span>Imposta Target</span>
+        </button>
 
-  <!-- MODAL: ORDER -->
-  <div id="modal-order" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
-        <h3 class="font-bold text-lg" id="modal-order-title">Ordine Cliente</h3>
-        <button onclick="closeModal('modal-order')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        <!-- DASHBOARD FILTERS -->
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="dash-province" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="ALL">Tutte le Province</option>
+            <option value="MC">Macerata (MC)</option>
+            <option value="AN">Ancona (AN)</option>
+            <option value="PU">Pesaro-Urbino (PU)</option>
+            <option value="FM">Fermo (FM)</option>
+            <option value="AP">Ascoli Piceno (AP)</option>
+          </select>
+          <select id="dash-mandate" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="ALL">Tutte le Mandanti</option>
+          </select>
+          <select id="dash-year" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="ALL">Tutti gli Anni</option>
+            <option value="2026" selected>2026</option>
+            <option value="2025">2025</option>
+          </select>
+          <select id="dash-month" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="ALL" selected>Tutto l'Anno</option>
+            <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option>
+            <option value="3">Aprile</option><option value="4">Maggio</option><option value="5">Giugno</option>
+            <option value="6">Luglio</option><option value="7">Agosto</option><option value="8">Settembre</option>
+            <option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
+          </select>
+        </div>
       </div>
-      <form onsubmit="saveOrder(event)" class="p-6 space-y-4">
-        <input type="hidden" id="order-id">
-        <input type="hidden" id="order-client-id" required>
-        <div class="relative">
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Cerca Cliente o Prospect *</label>
-          <div class="relative">
-            <input type="text" id="order-client-search" autocomplete="off" oninput="filterOrderClients(this.value)" placeholder="Digita nome o parola chiave..." required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10">
-            <span class="absolute right-3 top-3.5 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-          </div>
-          <div id="order-client-dropdown" class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto z-50 hidden custom-scrollbar"></div>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Azienda Mandante *</label>
-          <select id="order-mandate" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></select>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Data Ordine *</label>
-            <input type="date" id="order-date" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Importo Lordo (€) *</label>
-            <input type="number" step="0.01" id="order-amount" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Note / Riferimento</label>
-          <input type="text" id="order-notes" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div class="pt-4 flex justify-end space-x-3">
-          <button type="button" onclick="closeModal('modal-order')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-sm">Salva Ordine</button>
-        </div>
-      </form>
     </div>
-  </div>
 
-  <!-- MODAL: EVENT (CON TASTO ELIMINA CORRETTO) -->
-  <div id="modal-event" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
-        <h3 class="font-bold text-lg" id="modal-event-title">Appuntamento / Report Visita</h3>
-        <button onclick="closeModal('modal-event')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    <!-- TARGET & OBIETTIVI PROGRESS SECTION -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Fatturato Annuale</p>
+            <h3 id="target-annual-text" class="text-xl font-bold text-slate-900">€ 0 / € 0</h3>
+          </div>
+          <span id="target-annual-percent" class="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">0%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+          <div id="target-annual-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <p id="target-annual-remaining" class="text-xs text-slate-500 italic">Mancano € 0 al completamento dell'obiettivo annuale.</p>
       </div>
-      <form onsubmit="saveEvent(event)" class="p-6 space-y-4">
-        <input type="hidden" id="event-id">
-        <input type="hidden" id="event-client-id" required>
-        <div class="relative">
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Cerca Cliente o Prospect *</label>
-          <div class="relative">
-            <input type="text" id="event-client-search" autocomplete="off" oninput="filterEventClients(this.value)" placeholder="Digita nome o parola chiave..." required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10">
-            <span class="absolute right-3 top-3.5 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
-          </div>
-          <div id="event-client-dropdown" class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto z-50 hidden custom-scrollbar"></div>
-        </div>
-        <div class="grid grid-cols-3 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Data Visita *</label>
-            <input type="date" id="event-date" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Orario *</label>
-            <input type="time" id="event-time" value="09:00" required class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Stato *</label>
-            <select id="event-status" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              <option value="Pianificato">Pianificato</option>
-              <option value="Completato">Completato</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Note Colloquio / Esigenze Cliente *</label>
-          <textarea id="event-notes" required rows="4" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
-        </div>
-        <div class="pt-4 flex justify-between items-center">
-          <button type="button" onclick="deleteCurrentEvent()" class="px-4 py-2.5 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 shadow-sm">
-            <i class="fa-solid fa-trash mr-1"></i> Elimina
-          </button>
-          
-          <div class="space-x-3">
-            <button type="button" onclick="closeModal('modal-event')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-            <button type="submit" class="px-5 py-2.5 rounded-xl bg-yellow-500 text-slate-900 font-semibold text-sm hover:bg-yellow-400 shadow-sm">Salva & Apri in Google Cal</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
 
-  <!-- MODAL: NOTE / TASK (KEEP) -->
-  <div id="modal-note" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
-        <h3 class="font-bold text-lg" id="modal-note-title">Nuova Nota o Lista Task</h3>
-        <button onclick="closeModal('modal-note')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Fatturato Mensile</p>
+            <h3 id="target-monthly-text" class="text-xl font-bold text-slate-900">€ 0 / € 0</h3>
+          </div>
+          <span id="target-monthly-percent" class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">0%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+          <div id="target-monthly-bar" class="bg-indigo-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <p id="target-monthly-remaining" class="text-xs text-slate-500 italic">Mancano € 0 al completamento dell'obiettivo mensile.</p>
       </div>
-      <form onsubmit="saveNote(event)" class="p-6 space-y-4">
-        <input type="hidden" id="note-id">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Titolo Nota / Attività *</label>
-          <input type="text" id="note-title" required placeholder="Es. Chiamate da fare, Campionari..." class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Task della Lista (Inserisci un task per riga)</label>
-          <textarea id="note-items" rows="5" placeholder="Spedire listino prezzi&#10;Ordinare cataloghi&#10;Verificare bonifico" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none"></textarea>
-          <p class="text-[11px] text-slate-400 mt-1">Ogni riga diventerà un elemento spuntabile nella lista.</p>
-        </div>
-        <div class="pt-4 flex justify-end space-x-3">
-          <button type="button" onclick="closeModal('modal-note')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-yellow-500 text-slate-900 font-semibold text-sm hover:bg-yellow-400 shadow-sm">Salva Nota</button>
-        </div>
-      </form>
     </div>
-  </div>
 
-  <!-- SCRIPT LOGIC -->
-  <script>
-    // Configurazione Firebase Cloud (Sincronizzazione automatica universale)
-    const firebaseConfig = {
-      apiKey: "AIzaSyAbamy2sRrHZedyEEU4lrQTlpGYvlXvFyM",
-      authDomain: "agenteprosync.firebaseapp.com",
-      projectId: "agenteprosync",
-      storageBucket: "agenteprosync.firebasestorage.app",
-      messagingSenderId: "286289976431",
-      appId: "1:286289976431:web:9166eed1d056cf4c8f819a"
-    };
+    <!-- STATS CARDS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+        <div class="bg-blue-100 text-blue-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-chart-line"></i></div>
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fatturato Lordo</p>
+          <h3 id="stat-turnover" class="text-2xl font-bold text-slate-900">€ 0</h3>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+        <div class="bg-emerald-100 text-emerald-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-sack-dollar"></i></div>
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Provvigioni Nette</p>
+          <h3 id="stat-commissions" class="text-2xl font-bold text-emerald-600">€ 0</h3>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+        <div class="bg-indigo-100 text-indigo-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-store"></i></div>
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Clienti Attivi</p>
+          <h3 id="stat-clients" class="text-2xl font-bold text-slate-900">0</h3>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+        <div class="bg-amber-100 text-amber-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-user-clock"></i></div>
+        <div>
+          <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Prospect Aperti</p>
+          <h3 id="stat-prospects" class="text-2xl font-bold text-amber-600">0</h3>
+        </div>
+      </div>
+    </div>
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const firestore = firebase.firestore();
+    <!-- ANALYTICS TABLES GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-slate-900 text-base flex items-center">
+            <i class="fa-solid fa-building text-blue-600 mr-2"></i>Fatturato per Mandante
+          </h3>
+          <select id="sort-mandates" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-slate-50 font-medium">
+            <option value="desc">Fatturato: Decrescente</option>
+            <option value="asc">Fatturato: Crescente</option>
+            <option value="name">Nome: A-Z</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="p-3">Mandante</th>
+                <th class="p-3 text-center">% Provv.</th>
+                <th class="p-3 text-right">Fatturato Lordo</th>
+                <th class="p-3 text-right">Provvigioni</th>
+              </tr>
+            </thead>
+            <tbody id="dash-mandate-breakdown" class="divide-y divide-slate-100 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
 
-    const defaultData = {
-      targets: { annual: 200000, monthly: 18000 },
-      mandates: [
-        { id: "m1", name: "Agenzia ARD srl", rate: 8.5 },
-        { id: "m2", name: "Canaletto Smart", rate: 10.0 },
-        { id: "m3", name: "Pennellificio Giuliani", rate: 7.0 }
-      ],
-      clients: [
-        { id: "c1", type: "Cliente", name: "G.T.P. di Evangelisti", vat: "01234567891", city: "Ancona", province: "AN", contact: "Giacomo", mandateIds: ["m1", "m2"] },
-        { id: "c2", type: "Cliente", name: "Centro dell'Isolante", vat: "01234567892", city: "Jesi", province: "AN", contact: "Ufficio Acquisti", mandateIds: ["m1", "m3"] },
-        { id: "c3", type: "Prospect", name: "Edilizia Costruzioni srl", vat: "01234567893", city: "Macerata", province: "MC", contact: "Ing. Spada", mandateIds: ["m1"] }
-      ],
-      orders: [
-        { id: "o1", clientId: "c1", mandateId: "m1", date: "2026-10-15", amount: 12000, notes: "Fornitura rivestimenti" },
-        { id: "o2", clientId: "c2", mandateId: "m3", date: "2026-11-02", amount: 4500, notes: "Primo ordine pennelli" }
-      ],
-      events: [
-        { id: "e1", clientId: "c3", date: "2026-11-10", time: "10:30", status: "Pianificato", notes: "Primo contatto commerciale in cantiere" },
-        { id: "e2", clientId: "c1", date: "2026-11-04", time: "15:00", status: "Completato", notes: "Consegnata nuova campionatura finiture." }
-      ],
-      notes: [
-        {
-          id: "n1",
-          title: "Priorità della Settimana",
-          items: [
-            { text: "Confermare appuntamento Studio Spada", checked: true },
-            { text: "Inviare listino aggiornato", checked: false },
-            { text: "Verificare scorte cataloghi cartacei", checked: false }
-          ]
-        }
-      ]
-    };
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-slate-900 text-base flex items-center">
+            <i class="fa-solid fa-users text-emerald-600 mr-2"></i>Fatturato per Cliente
+          </h3>
+          <select id="sort-clients" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-slate-50 font-medium">
+            <option value="desc">Fatturato: Decrescente</option>
+            <option value="asc">Fatturato: Crescente</option>
+            <option value="name">Nome: A-Z</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="p-3">Cliente</th>
+                <th class="p-3">Provincia</th>
+                <th class="p-3 text-right">Fatturato Lordo</th>
+                <th class="p-3 text-right">Provvigioni</th>
+              </tr>
+            </thead>
+            <tbody id="dash-client-breakdown" class="divide-y divide-slate-100 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-    const quotes = [
-      { quote: "Il successo nelle vendite è l'equilibrio perfetto tra preparazione e tenacia.", author: "Strategia Commerciale" },
-      { quote: "Ascolta il cliente: ti dirà esattamente come fargli firmare l'ordine.", author: "Agente Plurimandatario" },
-      { quote: "Non vendere prodotti, vendi soluzioni ai problemi del tuo cliente.", author: "Maestro di Vendita" }
-    ];
-
-    let db = defaultData;
-    let currentCalendarDate = new Date(); // Gestione mese/anno corrente per il calendario
-
-    // Gestione apertura/chiusura menu mobile
-    function toggleSidebar() {
-      const sidebar = document.getElementById('app-sidebar');
-      const overlay = document.getElementById('sidebar-overlay');
-      sidebar.classList.toggle('-translate-x-full');
-      overlay.classList.toggle('hidden');
-    }
-
-    // Sincronizzazione in tempo reale con Firestore
-    function initCloudSync() {
-      firestore.collection("agente_data").doc("main_store").onSnapshot((doc) => {
-        if (doc.exists) {
-          const cloudData = doc.data();
-          if (cloudData && cloudData.clients && cloudData.mandates) {
-            db = cloudData;
-            if(!db.targets) db.targets = { annual: 200000, monthly: 18000 };
-            if(!db.notes) db.notes = [];
-            refreshActiveTab();
-            document.getElementById('cloud-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
-          }
-        } else {
-          saveDB();
-        }
-      }, (error) => {
-        console.error("Errore sync Cloud:", error);
-        document.getElementById('cloud-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> Offline (Locale)';
-      });
-    }
-
-    function saveDB() {
-      try {
-        localStorage.setItem('agentepro_db', JSON.stringify(db));
-        
-        firestore.collection("agente_data").doc("main_store").set(db)
-          .then(() => {
-            const statusEl = document.getElementById('cloud-status');
-            if(statusEl) {
-              statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
-            }
-          })
-          .catch((err) => {
-            console.error("Errore salvataggio Cloud:", err);
-            const statusEl = document.getElementById('cloud-status');
-            if(statusEl) {
-              statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Errore Sync';
-            }
-          });
-      } catch(e) {
-        console.error("Errore locale:", e);
-      }
-    }
-
-    function refreshActiveTab() {
-      const activeSec = document.querySelector('main section:not(.hidden)');
-      if(activeSec) {
-        const id = activeSec.id.replace('tab-', '');
-        if(id === 'dashboard') { populateMatrixFilter(); renderDashboard(); }
-        else if(id === 'clients') renderClients();
-        else if(id === 'orders') renderOrders();
-        else if(id === 'mandates') renderMandates();
-        else if(id === 'calendar') renderCalendar();
-        else if(id === 'notes') renderNotes();
-      }
-    }
-
-    function exportBackup() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `agentepro_backup_${new Date().toISOString().slice(0,10)}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    }
-
-    function importBackup(event) {
-      const fileReader = new FileReader();
-      if(event.target.files[0]) {
-        fileReader.readAsText(event.target.files[0], "UTF-8");
-        fileReader.onload = function(e) {
-          try {
-            const imported = JSON.parse(e.target.result);
-            if(imported && imported.clients && imported.mandates) {
-              db = imported;
-              if(!db.notes) db.notes = [];
-              saveDB();
-              alert("Backup importato con successo nel Cloud e sincronizzato!");
-              location.reload();
-            } else {
-              alert("Il file selezionato non è un formato di backup valido.");
-            }
-          } catch(ex) {
-            alert("Errore durante la lettura del file di backup.");
-          }
-        };
-      }
-    }
-
-    function resetData() {
-      if(confirm("Vuoi ripristinare i dati di esempio iniziali?")) {
-        db = defaultData;
-        saveDB();
-        location.reload();
-      }
-    }
-
-    function switchTab(tabId) {
-      document.querySelectorAll('main section').forEach(el => el.classList.add('hidden'));
-      const activeSec = document.getElementById(`tab-${tabId}`);
-      if(activeSec) activeSec.classList.remove('hidden');
-
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
-        btn.classList.add('hover:bg-slate-800', 'hover:text-white');
-      });
-      const activeBtn = document.getElementById(`nav-${tabId}`);
-      if(activeBtn) {
-        activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
-        activeBtn.classList.remove('hover:bg-slate-800');
-      }
-
-      if(window.innerWidth < 768) {
-        toggleSidebar();
-      }
-
-      if(tabId === 'dashboard') { populateMatrixFilter(); renderDashboard(); }
-      if(tabId === 'previsit') initPrevisit();
-      if(tabId === 'clients') renderClients();
-      if(tabId === 'orders') renderOrders();
-      if(tabId === 'mandates') renderMandates();
-      if(tabId === 'calendar') renderCalendar();
-      if(tabId === 'notes') renderNotes();
-    }
-
-    function newQuote() {
-      const q = quotes[Math.floor(Math.random() * quotes.length)];
-      document.getElementById('quote-text').innerText = `"${q.quote}"`;
-      document.getElementById('quote-author').innerText = `— ${q.author}`;
-    }
-
-    function populateMatrixFilter() {
-      const sel = document.getElementById('filter-matrix-mandate');
-      if(!sel) return;
-      const current = sel.value;
-      sel.innerHTML = `<option value="ALL">Tutte le Mandanti</option>` + db.mandates.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-      sel.value = current;
-    }
-
-    function saveTargets(e) {
-      e.preventDefault();
-      const annual = parseFloat(document.getElementById('target-annual-input').value) || 0;
-      const monthly = parseFloat(document.getElementById('target-monthly-input').value) || 0;
-      db.targets = { annual, monthly };
-      saveDB();
-      closeModal('modal-target');
-      renderDashboard();
-    }
-
-    function exportDashboardExcel() {
-      const provinceFilter = document.getElementById('dash-province').value;
-      const year = document.getElementById('dash-year').value;
-      const month = document.getElementById('dash-month').value;
-
-      let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += "REPORT DASHBOARD COMMERCIALE\n";
-      csvContent += `Filtri applicati: Provincia=${provinceFilter}; Anno=${year}; Mese=${month}\n\n`;
-
-      csvContent += "FATTURATO PER MANDANTE\n";
-      csvContent += "Azienda Mandante;% Provvigione;Fatturato Lordo (€);Provvigione Netta (€)\n";
-      
-      db.mandates.forEach(m => {
-        const mOrders = db.orders.filter(o => o.mandateId === m.id);
-        const mTurnover = mOrders.reduce((acc, o) => acc + o.amount, 0);
-        const mComm = mTurnover * (m.rate / 100);
-        csvContent += `"${m.name}";"${m.rate}%";"${mTurnover}";"${mComm}"\n`;
-      });
-
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `dashboard_report_${new Date().toISOString().slice(0,10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }
-
-    function renderDashboard() {
-      const provinceFilter = document.getElementById('dash-province').value;
-      const year = document.getElementById('dash-year').value;
-      const month = document.getElementById('dash-month').value;
-
-      let filtered = db.orders.filter(o => {
-        const client = db.clients.find(c => c.id === o.clientId);
-        if(!client) return false;
-        const matchProvince = (provinceFilter === 'ALL' || client.province === provinceFilter);
-        const d = new Date(o.date);
-        const matchYear = (year === 'ALL' || d.getFullYear().toString() === year);
-        const matchMonth = (month === 'ALL' || d.getMonth().toString() === month);
-        return matchProvince && matchYear && matchMonth;
-      });
-
-      let turnover = filtered.reduce((acc, o) => acc + o.amount, 0);
-      let commissions = filtered.reduce((acc, o) => {
-        const m = db.mandates.find(x => x.id === o.mandateId);
-        return acc + (o.amount * ((m ? m.rate : 0) / 100));
-      }, 0);
-
-      document.getElementById('stat-turnover').innerText = `€ ${turnover.toLocaleString('it-IT', {minimumFractionDigits: 2})}`;
-      document.getElementById('stat-commissions').innerText = `€ ${commissions.toLocaleString('it-IT', {minimumFractionDigits: 2})}`;
-      document.getElementById('stat-clients').innerText = db.clients.filter(c => c.type === 'Cliente' && (provinceFilter === 'ALL' || c.province === provinceFilter)).length;
-      document.getElementById('stat-prospects').innerText = db.clients.filter(c => c.type === 'Prospect' && (provinceFilter === 'ALL' || c.province === provinceFilter)).length;
-
-      const targetAnnual = db.targets.annual || 200000;
-      const targetMonthly = db.targets.monthly || 18000;
-      const annualPct = Math.min(100, Math.round((turnover / targetAnnual) * 100));
-      const monthlyPct = Math.min(100, Math.round((turnover / targetMonthly) * 100));
-
-      document.getElementById('target-annual-text').innerText = `€ ${turnover.toLocaleString('it-IT')} / € ${targetAnnual.toLocaleString('it-IT')}`;
-      document.getElementById('target-annual-percent').innerText = `${annualPct}%`;
-      document.getElementById('target-annual-bar').style.width = `${annualPct}%`;
-      const remAnnual = targetAnnual - turnover;
-      document.getElementById('target-annual-remaining').innerText = remAnnual > 0 ? `Mancano € ${remAnnual.toLocaleString('it-IT')} al completamento dell'obiettivo annuale.` : '🎉 Obiettivo annuale raggiunto!';
-
-      document.getElementById('target-monthly-text').innerText = `€ ${turnover.toLocaleString('it-IT')} / € ${targetMonthly.toLocaleString('it-IT')}`;
-      document.getElementById('target-monthly-percent').innerText = `${monthlyPct}%`;
-      document.getElementById('target-monthly-bar').style.width = `${monthlyPct}%`;
-      const remMonthly = targetMonthly - turnover;
-      document.getElementById('target-monthly-remaining').innerText = remMonthly > 0 ? `Mancano € ${remMonthly.toLocaleString('it-IT')} al completamento dell'obiettivo mensile.` : '🎉 Obiettivo mensile raggiunto!';
-
-      // Mandate Breakdown
-      const mandateSort = document.getElementById('sort-mandates').value;
-      const mandateTable = document.getElementById('dash-mandate-breakdown');
-      mandateTable.innerHTML = '';
-      let mandateStats = db.mandates.map(m => {
-        const mOrders = filtered.filter(o => o.mandateId === m.id);
-        const mTurnover = mOrders.reduce((acc, o) => acc + o.amount, 0);
-        const mComm = mTurnover * (m.rate / 100);
-        return { ...m, turnover: mTurnover, comm: mComm };
-      });
-      if(mandateSort === 'desc') mandateStats.sort((a, b) => b.turnover - a.turnover);
-      else if(mandateSort === 'asc') mandateStats.sort((a, b) => a.turnover - b.turnover);
-      else if(mandateSort === 'name') mandateStats.sort((a, b) => a.name.localeCompare(b.name));
-
-      mandateStats.forEach(m => {
-        mandateTable.innerHTML += `
-          <tr class="hover:bg-slate-50">
-            <td class="p-3 font-bold text-slate-800">${m.name}</td>
-            <td class="p-3 text-center font-semibold text-blue-600">${m.rate}%</td>
-            <td class="p-3 text-right font-bold text-slate-800">€ ${m.turnover.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-            <td class="p-3 text-right font-bold text-emerald-600">€ ${m.comm.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-          </tr>
-        `;
-      });
-
-      // Client Breakdown
-      const clientSort = document.getElementById('sort-clients').value;
-      const clientTable = document.getElementById('dash-client-breakdown');
-      clientTable.innerHTML = '';
-      let activeClients = db.clients.filter(c => provinceFilter === 'ALL' || c.province === provinceFilter);
-      let clientStats = activeClients.map(c => {
-        const cOrders = filtered.filter(o => o.clientId === c.id);
-        const cTurnover = cOrders.reduce((acc, o) => acc + o.amount, 0);
-        const cComm = cOrders.reduce((acc, o) => {
-          const m = db.mandates.find(x => x.id === o.mandateId);
-          return acc + (o.amount * ((m ? m.rate : 0) / 100));
-        }, 0);
-        return { ...c, turnover: cTurnover, comm: cComm, hasOrders: cOrders.length > 0 };
-      });
-      if(clientSort === 'desc') clientStats.sort((a, b) => b.turnover - a.turnover);
-      else if(clientSort === 'asc') clientStats.sort((a, b) => a.turnover - b.turnover);
-      else if(clientSort === 'name') clientStats.sort((a, b) => a.name.localeCompare(b.name));
-
-      clientStats.forEach(c => {
-        if(c.turnover > 0 || c.hasOrders) {
-          clientTable.innerHTML += `
-            <tr class="hover:bg-slate-50">
-              <td class="p-3 font-bold text-slate-800">${c.name}</td>
-              <td class="p-3"><span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">${c.province}</span></td>
-              <td class="p-3 text-right font-bold text-slate-800">€ ${c.turnover.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-              <td class="p-3 text-right font-bold text-emerald-600">€ ${c.comm.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
+    <!-- MATRIX TABLE -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <h3 class="font-bold text-slate-900 text-base flex items-center">
+          <i class="fa-solid fa-table-cells text-indigo-600 mr-2"></i>Analisi Incrociata (Cliente & Mandante)
+        </h3>
+        <div class="flex items-center space-x-2">
+          <select id="filter-matrix-mandate" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-slate-50 font-medium">
+            <option value="ALL">Tutte le Mandanti</option>
+          </select>
+          <select id="sort-matrix" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-slate-50 font-medium">
+            <option value="desc">Fatturato: Decrescente</option>
+            <option value="asc">Fatturato: Crescente</option>
+          </select>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-600">
+          <thead class="bg-slate-50 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200">
+            <tr>
+              <th class="p-3">Cliente</th>
+              <th class="p-3">Azienda Mandante</th>
+              <th class="p-3 text-center">N. Ordini</th>
+              <th class="p-3 text-right">Fatturato Lordo</th>
+              <th class="p-3 text-right">Provvigione Netta</th>
             </tr>
-          `;
-        }
-      });
-      if(!clientTable.innerHTML) clientTable.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Nessun dato.</td></tr>`;
+          </thead>
+          <tbody id="dash-matrix-breakdown" class="divide-y divide-slate-100 text-xs"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
-      // Matrix Table
-      const matrixMandateFilter = document.getElementById('filter-matrix-mandate').value;
-      const matrixSort = document.getElementById('sort-matrix').value;
-      const matrixTable = document.getElementById('dash-matrix-breakdown');
-      matrixTable.innerHTML = '';
-      let matrixMap = {};
-      filtered.forEach(o => {
-        if(matrixMandateFilter !== 'ALL' && o.mandateId !== matrixMandateFilter) return;
-        const key = `${o.clientId}_${o.mandateId}`;
-        if(!matrixMap[key]) matrixMap[key] = { clientId: o.clientId, mandateId: o.mandateId, count: 0, turnover: 0, comm: 0 };
-        matrixMap[key].count += 1;
-        matrixMap[key].turnover += o.amount;
-        const m = db.mandates.find(x => x.id === o.mandateId);
-        matrixMap[key].comm += o.amount * ((m ? m.rate : 0) / 100);
-      });
-      let matrixArr = Object.values(matrixMap);
-      if(matrixSort === 'desc') matrixArr.sort((a, b) => b.turnover - a.turnover);
-      else if(matrixSort === 'asc') matrixArr.sort((a, b) => a.turnover - b.turnover);
-
-      matrixArr.forEach(item => {
-        const client = db.clients.find(c => c.id === item.clientId) || { name: 'Cliente', province: '' };
-        const mandate = db.mandates.find(m => m.id === item.mandateId) || { name: 'Mandante' };
-        matrixTable.innerHTML += `
-          <tr class="hover:bg-slate-50">
-            <td class="p-3 font-bold text-slate-800">${client.name} <span class="text-slate-400 font-normal">(${client.province})</span></td>
-            <td class="p-3"><span class="bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded">${mandate.name}</span></td>
-            <td class="p-3 text-center font-medium">${item.count}</td>
-            <td class="p-3 text-right font-bold text-slate-800">€ ${item.turnover.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-            <td class="p-3 text-right font-bold text-emerald-600">€ ${item.comm.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-          </tr>
-        `;
-      });
-      if(!matrixArr.length) matrixTable.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">Nessun ordine incrociato trovato.</td></tr>`;
-    }
-
-    // Pre-visit Hub
-    function initPrevisit() {
-      document.getElementById('pv-search-input').value = '';
-      document.getElementById('pv-selected-client-id').value = '';
-      document.getElementById('previsit-card-container').classList.add('hidden');
-      document.getElementById('previsit-empty').classList.remove('hidden');
-    }
-
-    function filterPrevisitClients(query) {
-      const dropdown = document.getElementById('pv-search-dropdown');
-      const q = query.toLowerCase().trim();
-      if(!q) { dropdown.classList.add('hidden'); return; }
-      const matches = db.clients.filter(c => c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q));
-      if(!matches.length) { dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 italic">Nessun cliente trovato</div>`; dropdown.classList.remove('hidden'); return; }
-      dropdown.innerHTML = matches.map(c => `
-        <div onclick="selectPrevisitClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b border-slate-100 flex justify-between items-center">
-          <div><span class="font-bold text-slate-900">${c.name}</span> <span class="text-slate-400">(${c.city} - ${c.province})</span></div>
-          <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${c.type === 'Cliente' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${c.type}</span>
+  <!-- PRE-VISIT HUB TAB -->
+  <section id="tab-previsit" class="space-y-6 hidden">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900"><i class="fa-solid fa-clipboard-question text-amber-500 mr-2"></i>Centro Briefing Pre-Visita</h2>
+        <p class="text-sm text-slate-500">Cerca un cliente o prospect e consulta lo storico completo in ordine cronologico</p>
+      </div>
+      <div class="relative w-full md:w-80">
+        <input type="hidden" id="pv-selected-client-id">
+        <div class="relative">
+          <input type="text" id="pv-search-input" autocomplete="off" oninput="filterPrevisitClients(this.value)" placeholder="Cerca cliente per nome o città..." class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10">
+          <span class="absolute right-3.5 top-3.5 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
         </div>
-      `).join('');
-      dropdown.classList.remove('hidden');
-    }
+        <div id="pv-search-dropdown" class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 max-h-56 overflow-y-auto z-50 hidden custom-scrollbar"></div>
+      </div>
+    </div>
 
-    function selectPrevisitClient(id, name) {
-      document.getElementById('pv-selected-client-id').value = id;
-      document.getElementById('pv-search-input').value = name;
-      document.getElementById('pv-search-dropdown').classList.add('hidden');
-      loadPrevisitData(id);
-    }
-
-    function loadPrevisitData(id) {
-      const card = document.getElementById('previsit-card-container');
-      const empty = document.getElementById('previsit-empty');
-      if(!id) { card.classList.add('hidden'); empty.classList.remove('hidden'); return; }
-      empty.classList.add('hidden'); card.classList.remove('hidden');
-
-      const client = db.clients.find(c => c.id === id);
-      const badge = document.getElementById('pv-type-badge');
-      badge.innerText = client.type;
-      badge.className = `px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide ${client.type === 'Cliente' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`;
-
-      document.getElementById('pv-name').innerText = client.name;
-      document.getElementById('pv-location').innerHTML = `<i class="fa-solid fa-location-dot mr-1.5 text-slate-400"></i>${client.city} (${client.province})`;
-      document.getElementById('pv-contact').innerHTML = `<i class="fa-solid fa-user-tie mr-1.5 text-slate-400"></i>${client.contact || 'Nessun referente'}`;
-      document.getElementById('pv-vat').innerText = `P.IVA: ${client.vat || 'Non inserita'}`;
-
-      document.getElementById('pv-mandates').innerHTML = (client.mandateIds || []).map(mId => {
-        const m = db.mandates.find(x => x.id === mId);
-        return m ? `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold px-2.5 py-1 rounded-lg">${m.name} (${m.rate}%)</span>` : '';
-      }).join('') || '<span class="text-xs text-slate-400">Nessuna mandante</span>';
-
-      const clientOrders = db.orders.filter(o => o.clientId === id);
-      const totalT = clientOrders.reduce((acc, o) => acc + o.amount, 0);
-      document.getElementById('pv-turnover').innerText = `€ ${totalT.toLocaleString('it-IT', {minimumFractionDigits: 2})}`;
-
-      const clientEvents = db.events.filter(e => e.clientId === id).sort((a, b) => new Date(b.date) - new Date(a.date));
-      document.getElementById('pv-reports-list').innerHTML = clientEvents.length ? clientEvents.map(ev => `
-        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1">
-          <div class="flex justify-between font-semibold text-slate-700">
-            <span><i class="fa-regular fa-calendar mr-1 text-blue-500"></i>${ev.date} ${ev.time ? '• ' + ev.time : ''}</span>
-            <span class="${ev.status === 'Completato' ? 'text-emerald-600' : 'text-blue-600'}">${ev.status}</span>
-          </div>
-          <p class="text-slate-600">${ev.notes}</p>
+    <div id="previsit-card-container" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-6">
+          <span id="pv-type-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide"></span>
+          <h3 id="pv-name" class="text-xl font-bold text-slate-900 mt-2">--</h3>
+          <p id="pv-location" class="text-sm text-slate-500 mt-1"><i class="fa-solid fa-location-dot mr-1"></i>--</p>
+          <p id="pv-contact" class="text-sm text-slate-600 mt-1"><i class="fa-solid fa-user-tie mr-1"></i>--</p>
+          <p id="pv-vat" class="text-xs text-slate-400 mt-1">P.IVA: --</p>
         </div>
-      `).join('') : '<p class="text-xs text-slate-400 italic">Nessun report visita.</p>';
-
-      document.getElementById('pv-orders-list').innerHTML = clientOrders.length ? clientOrders.map(o => {
-        const m = db.mandates.find(x => x.id === o.mandateId);
-        return `
-          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs flex justify-between items-center">
-            <div>
-              <p class="font-bold text-slate-800">€ ${o.amount.toLocaleString('it-IT')} <span class="font-normal text-slate-500">(${m ? m.name : ''})</span></p>
-              <p class="text-slate-400 text-[11px]">${o.date} • ${o.notes || ''}</p>
-            </div>
-          </div>
-        `;
-      }).join('') : '<p class="text-xs text-slate-400 italic">Nessun ordine.</p>';
-    }
-
-    // Clients
-    function renderClients() {
-      const grid = document.getElementById('clients-grid');
-      grid.innerHTML = '';
-      db.clients.forEach(c => {
-        const mandates = (c.mandateIds || []).map(mId => {
-          const m = db.mandates.find(x => x.id === mId);
-          return m ? `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-semibold px-2 py-0.5 rounded-md mr-1 mb-1 inline-block">${m.name}</span>` : '';
-        }).join('');
-
-        grid.innerHTML += `
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-4">
-            <div>
-              <div class="flex justify-between items-start mb-2">
-                <span class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide ${c.type === 'Cliente' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${c.type}</span>
-                <div class="space-x-1">
-                  <button onclick="editClient('${c.id}')" class="text-slate-400 hover:text-blue-600 p-1"><i class="fa-solid fa-pen-to-square text-sm"></i></button>
-                  <button onclick="deleteClient('${c.id}')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash text-sm"></i></button>
-                </div>
-              </div>
-              <h3 class="font-bold text-slate-900 text-lg">${c.name}</h3>
-              <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-location-dot mr-1"></i>${c.city} (<strong class="text-slate-700">${c.province}</strong>) ${c.contact ? '• Ref: ' + c.contact : ''}</p>
-              <p class="text-[11px] text-slate-400 mt-0.5">P.IVA: ${c.vat || 'Non inserita'}</p>
-              <div class="mt-4">
-                <p class="text-[11px] uppercase font-bold text-slate-400 mb-1">Mandanti:</p>
-                <div>${mandates || '<span class="text-xs text-slate-400 italic">Nessuna</span>'}</div>
-              </div>
-            </div>
-            <div class="pt-3 border-t border-slate-100 flex justify-between items-center">
-              ${c.type === 'Prospect' ? `<button onclick="convertToClient('${c.id}')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg shadow-sm">Converti in Cliente</button>` : '<span></span>'}
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    function editClient(id) {
-      const c = db.clients.find(x => x.id === id);
-      if(!c) return;
-      openModal('modal-client');
-      document.getElementById('modal-client-title').innerText = "Modifica Contatto";
-      document.getElementById('client-id').value = c.id;
-      document.getElementById('client-type').value = c.type;
-      document.getElementById('client-province').value = c.province || 'MC';
-      document.getElementById('client-name').value = c.name;
-      document.getElementById('client-vat').value = c.vat || '';
-      document.getElementById('client-city').value = c.city;
-      document.getElementById('client-contact').value = c.contact || '';
-      document.querySelectorAll('input[name="mandate-checkbox"]').forEach(cb => { cb.checked = (c.mandateIds || []).includes(cb.value); });
-    }
-
-    function convertToClient(id) {
-      const c = db.clients.find(x => x.id === id);
-      if(c) { c.type = 'Cliente'; saveDB(); renderClients(); }
-    }
-
-    function deleteClient(id) {
-      if(confirm("Eliminare questo contatto?")) { db.clients = db.clients.filter(c => c.id !== id); saveDB(); renderClients(); }
-    }
-
-    // Orders Autocomplete & Management
-    function filterOrderClients(query) {
-      const dropdown = document.getElementById('order-client-dropdown');
-      const q = query.toLowerCase().trim();
-      if(!q) { dropdown.classList.add('hidden'); return; }
-      const matches = db.clients.filter(c => c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q));
-      if(!matches.length) { dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 italic">Nessun cliente</div>`; dropdown.classList.remove('hidden'); return; }
-      dropdown.innerHTML = matches.map(c => `
-        <div onclick="selectOrderClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b border-slate-100 flex justify-between items-center">
-          <div><span class="font-bold text-slate-900">${c.name}</span> <span class="text-slate-400">(${c.city})</span></div>
-          <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${c.type === 'Cliente' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${c.type}</span>
+        <div>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Aziende Mandanti Abbinate</h4>
+          <div id="pv-mandates" class="flex flex-wrap gap-1.5"></div>
         </div>
-      `).join('');
-      dropdown.classList.remove('hidden');
-    }
-
-    function selectOrderClient(id, name) {
-      document.getElementById('order-client-id').value = id;
-      document.getElementById('order-client-search').value = name;
-      document.getElementById('order-client-dropdown').classList.add('hidden');
-    }
-
-    function renderOrders() {
-      const filter = document.getElementById('order-filter-mandate').value;
-      const tbody = document.getElementById('table-orders-body');
-      tbody.innerHTML = '';
-      const sel = document.getElementById('order-filter-mandate');
-      sel.innerHTML = `<option value="ALL">Tutte le Mandanti</option>` + db.mandates.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-      sel.value = filter;
-
-      let list = db.orders;
-      if(filter !== 'ALL') list = list.filter(o => o.mandateId === filter);
-
-      if(!list.length) { tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">Nessun ordine.</td></tr>`; return; }
-
-      list.forEach(o => {
-        const client = db.clients.find(c => c.id === o.clientId) || { name: 'Cliente', province: '--' };
-        const mandate = db.mandates.find(m => m.id === o.mandateId) || { name: 'Mandante', rate: 0 };
-        const comm = o.amount * (mandate.rate / 100);
-        tbody.innerHTML += `
-          <tr class="hover:bg-slate-50">
-            <td class="p-4 font-medium">${o.date}</td>
-            <td class="p-4 font-bold text-slate-900">${client.name}</td>
-            <td class="p-4"><span class="bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded text-xs">${client.province || '--'}</span></td>
-            <td class="p-4"><span class="bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 rounded-lg text-xs">${mandate.name}</span></td>
-            <td class="p-4 text-right font-bold text-slate-800">€ ${o.amount.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-            <td class="p-4 text-center font-semibold">${mandate.rate}%</td>
-            <td class="p-4 text-right font-bold text-emerald-600">€ ${comm.toLocaleString('it-IT', {minimumFractionDigits: 2})}</td>
-            <td class="p-4 text-center space-x-1">
-              <button onclick="editOrder('${o.id}')" class="text-slate-400 hover:text-blue-600 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
-              <button onclick="deleteOrder('${o.id}')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash"></i></button>
-            </td>
-          </tr>
-        `;
-      });
-    }
-
-    function editOrder(id) {
-      const o = db.orders.find(x => x.id === id);
-      if(!o) return;
-      openModal('modal-order');
-      document.getElementById('modal-order-title').innerText = "Modifica Ordine";
-      document.getElementById('order-id').value = o.id;
-      const client = db.clients.find(c => c.id === o.clientId);
-      if(client) { document.getElementById('order-client-id').value = client.id; document.getElementById('order-client-search').value = client.name; }
-      document.getElementById('order-mandate').value = o.mandateId;
-      document.getElementById('order-date').value = o.date;
-      document.getElementById('order-amount').value = o.amount;
-      document.getElementById('order-notes').value = o.notes || '';
-    }
-
-    function deleteOrder(id) {
-      if(confirm("Eliminare ordine?")) { db.orders = db.orders.filter(o => o.id !== id); saveDB(); renderOrders(); }
-    }
-
-    // Mandates
-    function renderMandates() {
-      const grid = document.getElementById('mandates-grid');
-      grid.innerHTML = '';
-      db.mandates.forEach(m => {
-        const mOrders = db.orders.filter(o => o.mandateId === m.id);
-        const turnover = mOrders.reduce((acc, o) => acc + o.amount, 0);
-        const comm = turnover * (m.rate / 100);
-        grid.innerHTML += `
-          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-            <div class="flex justify-between items-start">
-              <div>
-                <h3 class="font-bold text-slate-900 text-lg">${m.name}</h3>
-                <span class="inline-block bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-lg mt-1">Provvigione: ${m.rate}%</span>
-              </div>
-              <div class="space-x-1">
-                <button onclick="editMandate('${m.id}')" class="text-slate-400 hover:text-blue-600 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
-                <button onclick="deleteMandate('${m.id}')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fa-solid fa-trash"></i></button>
-              </div>
-            </div>
-            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2 text-xs">
-              <div class="flex justify-between"><span class="text-slate-500">Fatturato:</span><span class="font-bold text-slate-800">€ ${turnover.toLocaleString('it-IT')}</span></div>
-              <div class="flex justify-between"><span class="text-slate-500">Provvigioni:</span><span class="font-bold text-emerald-600">€ ${comm.toLocaleString('it-IT', {minimumFractionDigits: 2})}</span></div>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    function editMandate(id) {
-      const m = db.mandates.find(x => x.id === id);
-      if(!m) return;
-      openModal('modal-mandate');
-      document.getElementById('modal-mandate-title').innerText = "Modifica Mandante";
-      document.getElementById('mandate-id').value = m.id;
-      document.getElementById('mandate-name').value = m.name;
-      document.getElementById('mandate-rate').value = m.rate;
-    }
-
-    function deleteMandate(id) {
-      if(confirm("Eliminare mandante?")) { db.mandates = db.mandates.filter(m => m.id !== id); saveDB(); renderMandates(); }
-    }
-
-    // Notes & Tasks (Keep Style)
-    function renderNotes() {
-      const grid = document.getElementById('notes-grid');
-      grid.innerHTML = '';
-      if(!db.notes || !db.notes.length) {
-        grid.innerHTML = `<div class="col-span-3 bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-400"><i class="fa-solid fa-note-sticky text-3xl mb-3 text-slate-300"></i><p class="text-base font-medium">Nessuna nota o task presente.</p></div>`;
-        return;
-      }
-
-      db.notes.forEach(note => {
-        let itemsHtml = (note.items || []).map((item, idx) => `
-          <label class="flex items-start space-x-2.5 cursor-pointer py-1 group">
-            <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleTaskItem('${note.id}', ${idx})" class="mt-0.5 rounded text-yellow-500 h-4 w-4 focus:ring-yellow-400">
-            <span class="text-xs font-medium text-slate-700 ${item.checked ? 'line-through text-slate-400' : ''}">${item.text}</span>
-          </label>
-        `).join('');
-
-        grid.innerHTML += `
-          <div class="bg-amber-50/60 border border-amber-200/80 p-6 rounded-2xl shadow-sm flex flex-col justify-between space-y-4 relative group">
-            <div class="absolute top-4 right-4 space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-lg backdrop-blur-sm">
-              <button onclick="editNote('${note.id}')" class="text-slate-500 hover:text-blue-600 p-1"><i class="fa-solid fa-pen text-xs"></i></button>
-              <button onclick="deleteNote('${note.id}')" class="text-slate-500 hover:text-rose-600 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
-            </div>
-            <div>
-              <h3 class="font-bold text-slate-900 text-base mb-3 pr-12"><i class="fa-solid fa-thumbtack text-amber-600 mr-1.5 text-xs"></i>${note.title}</h3>
-              <div class="space-y-1 divide-y divide-amber-100/50">${itemsHtml}</div>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    function toggleTaskItem(noteId, itemIdx) {
-      const note = db.notes.find(n => n.id === noteId);
-      if(note && note.items[itemIdx]) {
-        note.items[itemIdx].checked = !note.items[itemIdx].checked;
-        saveDB();
-        renderNotes();
-      }
-    }
-
-    function saveNote(e) {
-      e.preventDefault();
-      const id = document.getElementById('note-id').value;
-      const title = document.getElementById('note-title').value;
-      const rawItems = document.getElementById('note-items').value;
-      
-      const items = rawItems.split('\n').filter(line => line.trim() !== '').map(line => {
-        return { text: line.trim(), checked: false };
-      });
-
-      if(id) {
-        const note = db.notes.find(n => n.id === id);
-        if(note) {
-          note.title = title;
-          note.items = items.map(newItem => {
-            const existing = (note.items || []).find(old => old.text === newItem.text);
-            return existing ? existing : newItem;
-          });
-        }
-      } else {
-        db.notes.unshift({ id: 'n_' + Date.now(), title, items });
-      }
-
-      saveDB();
-      closeModal('modal-note');
-      renderNotes();
-    }
-
-    function editNote(id) {
-      const note = db.notes.find(n => n.id === id);
-      if(!note) return;
-      openModal('modal-note');
-      document.getElementById('modal-note-title').innerText = "Modifica Nota / Task";
-      document.getElementById('note-id').value = note.id;
-      document.getElementById('note-title').value = note.title;
-      document.getElementById('note-items').value = (note.items || []).map(i => i.text).join('\n');
-    }
-
-    function deleteNote(id) {
-      if(confirm("Eliminare questa nota?")) {
-        db.notes = db.notes.filter(n => n.id !== id);
-        saveDB();
-        renderNotes();
-      }
-    }
-
-    // Calendar Navigation & Rendering reale Dinamico
-    const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-
-    function changeMonth(direction) {
-      currentCalendarDate.setMonth(currentCalendarDate.getMonth() + direction);
-      renderCalendar();
-    }
-
-    function goToToday() {
-      currentCalendarDate = new Date();
-      renderCalendar();
-    }
-
-    function renderCalendar() {
-      const year = currentCalendarDate.getFullYear();
-      const month = currentCalendarDate.getMonth();
-
-      document.getElementById('calendar-title').innerText = `${monthNames[month]} ${year}`;
-
-      const grid = document.getElementById('calendar-days-grid');
-      grid.innerHTML = '';
-
-      const firstDayIndex = new Date(year, month, 1).getDay();
-      const startingDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
-      const totalDays = new Date(year, month + 1, 0).getDate();
-      const prevTotalDays = new Date(year, month, 0).getDate();
-
-      for (let i = startingDay - 1; i >= 0; i--) {
-        const dayNum = prevTotalDays - i;
-        grid.innerHTML += `<div class="bg-slate-50/50 border border-slate-100 rounded-lg md:rounded-xl p-1.5 md:p-2 h-24 md:h-32 opacity-40">
-          <div class="text-right font-bold text-xs text-slate-400">${dayNum}</div>
-        </div>`;
-      }
-
-      for(let day = 1; day <= totalDays; day++) {
-        const monthStr = (month + 1) < 10 ? '0' + (month + 1) : (month + 1);
-        const dayStr = day < 10 ? '0' + day : day;
-        const dateStr = `${year}-${monthStr}-${dayStr}`;
-
-        const dayEvents = db.events.filter(e => e.date === dateStr);
-        let eventsHtml = dayEvents.map(ev => {
-          const client = db.clients.find(c => c.id === ev.clientId) || { name: 'Cliente' };
-          return `
-            <div onclick="event.stopPropagation(); editEvent('${ev.id}')" class="text-[9px] md:text-[10px] p-1 rounded-md font-medium truncate cursor-pointer shadow-sm ${ev.status === 'Completato' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'} mb-1" title="${client.name}: ${ev.notes}">
-              <strong>${ev.time || ''} ${client.name}</strong>
-            </div>
-          `;
-        }).join('');
-
-        const todayObj = new Date();
-        const isToday = (day === todayObj.getDate() && month === todayObj.getMonth() && year === todayObj.getFullYear());
-        const borderClass = isToday ? 'border-blue-500 bg-blue-50/20 ring-2 ring-blue-400/30' : 'border-slate-200 bg-slate-50';
-
-        grid.innerHTML += `
-          <div ondblclick="openModalForDate('${dateStr}')" class="${borderClass} border rounded-lg md:rounded-xl p-1.5 md:p-2 h-24 md:h-32 flex flex-col justify-between hover:bg-blue-50/50 hover:border-blue-300 transition-all cursor-pointer group" title="Doppio click per aggiungere appuntamento">
-            <div class="flex justify-between items-center">
-              <span class="text-[9px] text-blue-600 font-bold hidden md:inline opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-plus mr-1"></i>Aggiungi</span>
-              <div class="text-right font-bold text-xs ${isToday ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center ml-auto' : 'text-slate-600 w-full md:w-auto'}">${day}</div>
-            </div>
-            <div class="overflow-y-auto custom-scrollbar flex-1 mt-1">${eventsHtml}</div>
-          </div>
-        `;
-      }
-    }
-
-    function filterEventClients(query) {
-      const dropdown = document.getElementById('event-client-dropdown');
-      const q = query.toLowerCase().trim();
-      if(!q) { dropdown.classList.add('hidden'); return; }
-      const matches = db.clients.filter(c => c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q));
-      if(!matches.length) { dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 italic">Nessun cliente</div>`; dropdown.classList.remove('hidden'); return; }
-      dropdown.innerHTML = matches.map(c => `
-        <div onclick="selectEventClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b border-slate-100 flex justify-between items-center">
-          <div><span class="font-bold text-slate-900">${c.name}</span> <span class="text-slate-400">(${c.city})</span></div>
-          <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${c.type === 'Cliente' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${c.type}</span>
+        <div>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Fatturato Storico Totale</h4>
+          <p id="pv-turnover" class="text-2xl font-bold text-blue-600">€ 0</p>
         </div>
-      `).join('');
-      dropdown.classList.remove('hidden');
-    }
+      </div>
 
-    function selectEventClient(id, name) {
-      document.getElementById('event-client-id').value = id;
-      document.getElementById('event-client-search').value = name;
-      document.getElementById('event-client-dropdown').classList.add('hidden');
-    }
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+          <h4 class="font-bold text-slate-900 flex items-center justify-between">
+            <span><i class="fa-solid fa-comments text-blue-500 mr-2"></i>Storico Report & Colloqui</span>
+            <span class="text-xs text-slate-400 font-normal">Dal più recente</span>
+          </h4>
+          <div id="pv-reports-list" class="space-y-3 max-h-72 overflow-y-auto pr-2"></div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+          <h4 class="font-bold text-slate-900 flex items-center"><i class="fa-solid fa-file-invoice text-emerald-500 mr-2"></i>Storico Ordini Recenti</h4>
+          <div id="pv-orders-list" class="space-y-3 max-h-72 overflow-y-auto pr-2"></div>
+        </div>
+      </div>
+    </div>
 
-    function openModalForDate(dateStr) {
-      openModal('modal-event');
-      document.getElementById('event-date').value = dateStr;
-    }
+    <div id="previsit-empty" class="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-400">
+      <i class="fa-solid fa-magnifying-glass text-3xl mb-3 text-slate-300"></i>
+      <p class="text-base font-medium">Usa la barra di ricerca in alto per selezionare un cliente e visualizzare la scheda pre-visita.</p>
+    </div>
+  </section>
 
-    function editEvent(id) {
-      const ev = db.events.find(x => x.id === id);
-      if(!ev) return;
-      openModal('modal-event');
-      document.getElementById('modal-event-title').innerText = "Modifica Appuntamento";
-      document.getElementById('event-id').value = ev.id;
-      const client = db.clients.find(c => c.id === ev.clientId);
-      if(client) { document.getElementById('event-client-id').value = client.id; document.getElementById('event-client-search').value = client.name; }
-      document.getElementById('event-date').value = ev.date;
-      document.getElementById('event-time').value = ev.time || '09:00';
-      document.getElementById('event-status').value = ev.status;
-      document.getElementById('event-notes').value = ev.notes;
-    }
+  <!-- CLIENTS TAB -->
+  <section id="tab-clients" class="space-y-6 hidden">
+    <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900">Anagrafica Clienti & Prospects</h2>
+        <p class="text-sm text-slate-500">Gestisci i contatti divisi per provincia</p>
+      </div>
+      <button onclick="openModal('modal-client')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
+        <i class="fa-solid fa-user-plus"></i>
+        <span>+ Nuovo Cliente / Prospect</span>
+      </button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="clients-grid"></div>
+  </section>
 
-    function openGoogleCalendar(ev) {
-      const client = db.clients.find(c => c.id === ev.clientId) || { name: 'Cliente' };
-      const startDateTime = new Date(`${ev.date}T${ev.time}:00`);
-      const endDateTime = new Date(startDateTime.getTime() + (60 * 60 * 1000));
-      const formatGCalDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  <!-- ORDERS TAB -->
+  <section id="tab-orders" class="space-y-6 hidden">
+    <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900">Registro Ordini & Calcolo Provvigioni</h2>
+        <p class="text-sm text-slate-500">Registra o modifica le vendite</p>
+      </div>
+      <button onclick="openModal('modal-order')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
+        <i class="fa-solid fa-cart-plus"></i>
+        <span>+ Registra Ordine</span>
+      </button>
+    </div>
 
-      const title = encodeURIComponent(`Visita: ${client.name}`);
-      const details = encodeURIComponent(ev.notes);
-      const location = encodeURIComponent(`${client.city || ''} (${client.province || ''})`);
-      const dates = `${formatGCalDate(startDateTime)}/${formatGCalDate(endDateTime)}`;
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+        <span class="font-bold text-slate-700 text-sm">Elenco Storico Vendite</span>
+        <select id="order-filter-mandate" onchange="renderOrders()" class="border border-slate-300 rounded-xl px-3 py-1.5 text-xs bg-white font-medium">
+          <option value="ALL">Tutte le Mandanti</option>
+        </select>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-600">
+          <thead class="bg-slate-50 text-slate-400 uppercase text-[11px] tracking-wider border-b border-slate-200">
+            <tr>
+              <th class="p-4">Data</th>
+              <th class="p-4">Cliente</th>
+              <th class="p-4">Provincia</th>
+              <th class="p-4">Mandante</th>
+              <th class="p-4 text-right">Importo Lordo</th>
+              <th class="p-4 text-center">% Provv.</th>
+              <th class="p-4 text-right">Provvigione €</th>
+              <th class="p-4 text-center">Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="table-orders-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
-      const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
-      window.open(gcalUrl, '_blank');
-    }
+  <!-- MANDATES TAB -->
+  <section id="tab-mandates" class="space-y-6 hidden">
+    <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900">Aziende Mandanti</h2>
+        <p class="text-sm text-slate-500">Gestisci i marchi rappresentati</p>
+      </div>
+      <button onclick="openModal('modal-mandate')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
+        <i class="fa-solid fa-building-circle-check"></i>
+        <span>+ Nuova Mandante</span>
+      </button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="mandates-grid"></div>
+  </section>
 
-    // Modals Handling
-    function openModal(id) {
-      document.getElementById(id).classList.remove('hidden');
-      if(id === 'modal-target') {
-        document.getElementById('target-annual-input').value = db.targets.annual || 200000;
-        document.getElementById('target-monthly-input').value = db.targets.monthly || 18000;
-      }
-      if(id === 'modal-order') {
-        document.getElementById('modal-order-title').innerText = "Registra Ordine";
-        document.getElementById('order-id').value = '';
-        document.getElementById('order-client-id').value = '';
-        document.getElementById('order-client-search').value = '';
-        document.getElementById('order-client-dropdown').classList.add('hidden');
-        document.getElementById('order-mandate').innerHTML = db.mandates.map(m => `<option value="${m.id}">${m.name} (${m.rate}%)</option>`).join('');
-        document.getElementById('order-date').valueAsDate = new Date();
-      }
-      if(id === 'modal-client') {
-        document.getElementById('modal-client-title').innerText = "Nuovo Contatto";
-        document.getElementById('client-id').value = '';
-        document.getElementById('client-name').value = '';
-        document.getElementById('client-vat').value = '';
-        document.getElementById('client-city').value = '';
-        document.getElementById('client-contact').value = '';
-        document.getElementById('client-mandates-boxes').innerHTML = db.mandates.map(m => `
-          <label class="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer py-1">
-            <input type="checkbox" name="mandate-checkbox" value="${m.id}" class="rounded text-blue-600 h-4 w-4">
-            <span>${m.name} (${m.rate}%)</span>
-          </label>
-        `).join('');
-      }
-      if(id === 'modal-mandate') {
-        document.getElementById('modal-mandate-title').innerText = "Nuova Mandante";
-        document.getElementById('mandate-id').value = '';
-        document.getElementById('mandate-name').value = '';
-        document.getElementById('mandate-rate').value = '';
-      }
-      if(id === 'modal-event') {
-        document.getElementById('modal-event-title').innerText = "Nuovo Appuntamento";
-        document.getElementById('event-id').value = '';
-        document.getElementById('event-client-id').value = '';
-        document.getElementById('event-client-search').value = '';
-        document.getElementById('event-client-dropdown').classList.add('hidden');
-        document.getElementById('event-date').valueAsDate = new Date();
-        document.getElementById('event-time').value = '09:00';
-        document.getElementById('event-notes').value = '';
-      }
-      if(id === 'modal-note') {
-        document.getElementById('modal-note-title').innerText = "Nuova Nota o Lista Task";
-        document.getElementById('note-id').value = '';
-        document.getElementById('note-title').value = '';
-        document.getElementById('note-items').value = '';
-      }
-    }
+  <!-- CALENDAR TAB -->
+  <section id="tab-calendar" class="space-y-6 hidden">
+    <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900">Agenda Appuntamenti & Google Calendar</h2>
+        <p class="text-sm text-slate-500">Seleziona mese e anno o clicca su un giorno per aggiungere un appuntamento</p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button onclick="openModal('modal-event')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
+          <i class="fa-solid fa-calendar-plus"></i>
+          <span>+ Nuovo Appuntamento</span>
+        </button>
+      </div>
+    </div>
 
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-4">
+        <!-- SELETTORE DIRETTO MESE E ANNO -->
+        <div class="flex items-center space-x-2">
+          <select id="calendar-select-month" onchange="onCalendarSelectChange()" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option>
+            <option value="3">Aprile</option><option value="4">Maggio</option><option value="5">Giugno</option>
+            <option value="6">Luglio</option><option value="7">Agosto</option><option value="8">Settembre</option>
+            <option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
+          </select>
+          <select id="calendar-select-year" onchange="onCalendarSelectChange()" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+          </select>
+          <button onclick="goToToday()" class="text-xs bg-slate-100 hover:bg-slate-200 font-semibold px-3 py-2.5 rounded-xl text-slate-700 transition-colors">Oggi</button>
+        </div>
+        <div class="flex items-center space-x-3">
+          <span class="inline-flex items-center text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span> Completato</span>
+          <span class="inline-flex items-center text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200"><span class="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span> Pianificato</span>
+        </div>
+      </div>
 
-    function saveMandate(e) {
-      e.preventDefault();
-      const id = document.getElementById('mandate-id').value;
-      const name = document.getElementById('mandate-name').value;
-      const rate = parseFloat(document.getElementById('mandate-rate').value) || 0;
-      if(id) {
-        const m = db.mandates.find(x => x.id === id);
-        if(m) { m.name = name; m.rate = rate; }
-      } else {
-        db.mandates.unshift({ id: 'm_' + Date.now(), name, rate });
-      }
-      saveDB(); closeModal('modal-mandate'); renderMandates();
-    }
+      <div class="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+        <div>LUN</div><div>MAR</div><div>MER</div><div>GIO</div><div>VEN</div><div>SAB</div><div>DOM</div>
+      </div>
+      <!-- GRIGLIA ESPANSA IN ORIZZONTALE -->
+      <div class="grid grid-cols-7 gap-2 md:gap-3" id="calendar-days-grid"></div>
+    </div>
+  </section>
 
-    function saveClient(e) {
-      e.preventDefault();
-      const id = document.getElementById('client-id').value;
-      const type = document.getElementById('client-type').value;
-      const province = document.getElementById('client-province').value;
-      const name = document.getElementById('client-name').value;
-      const vat = document.getElementById('client-vat').value;
-      const city = document.getElementById('client-city').value;
-      const contact = document.getElementById('client-contact').value;
-      const selectedMandates = Array.from(document.querySelectorAll('input[name="mandate-checkbox"]:checked')).map(cb => cb.value);
+  <!-- NOTES & TASK TAB (KEEP STYLE) -->
+  <section id="tab-notes" class="space-y-6 hidden">
+    <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-900">Note & Task (Stile Keep)</h2>
+        <p class="text-sm text-slate-500">Crea note rapide e liste di cose da fare spuntabili</p>
+      </div>
+      <button onclick="openModal('modal-note')" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold px-5 py-3 rounded-xl shadow-sm transition-all flex items-center space-x-2">
+        <i class="fa-solid fa-plus"></i>
+        <span>+ Nuova Nota / Task</span>
+      </button>
+    </div>
 
-      if(id) {
-        const c = db.clients.find(x => x.id === id);
-        if(c) { c.type = type; c.province = province; c.name = name; c.vat = vat; c.city = city; c.contact = contact; c.mandateIds = selectedMandates; }
-      } else {
-        db.clients.unshift({ id: 'c_' + Date.now(), type, province, name, vat, city, contact, mandateIds: selectedMandates });
-      }
-      saveDB(); closeModal('modal-client'); renderClients();
-    }
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="notes-grid"></div>
+  </section>
 
-    function saveOrder(e) {
-      e.preventDefault();
-      const id = document.getElementById('order-id').value;
-      const clientId = document.getElementById('order-client-id').value;
-      const mandateId = document.getElementById('order-mandate').value;
-      const date = document.getElementById('order-date').value;
-      const amount = parseFloat(document.getElementById('order-amount').value) || 0;
-      const notes = document.getElementById('order-notes').value;
+</div>
 
-      if(!clientId) { alert("Seleziona un cliente valido."); return; }
-      if(id) {
-        const o = db.orders.find(x => x.id === id);
-        if(o) { o.clientId = clientId; o.mandateId = mandateId; o.date = date; o.amount = amount; o.notes = notes; }
-      } else {
-        db.orders.unshift({ id: 'o_' + Date.now(), clientId, mandateId, date, amount, notes });
-      }
-      saveDB(); closeModal('modal-order'); renderOrders(); renderDashboard();
-    }
 
-    function saveEvent(e) {
-      e.preventDefault();
-      const id = document.getElementById('event-id').value;
-      const clientId = document.getElementById('event-client-id').value;
-      const date = document.getElementById('event-date').value;
-      const time = document.getElementById('event-time').value || '09:00';
-      const status = document.getElementById('event-status').value;
-      const notes = document.getElementById('event-notes').value;
-
-      if(!clientId) { alert("Seleziona un cliente valido."); return; }
-
-      let savedEvent;
-      if(id) {
-        const ev = db.events.find(x => x.id === id);
-        if(ev) { ev.clientId = clientId; ev.date = date; ev.time = time; ev.status = status; ev.notes = notes; savedEvent = ev; }
-      } else {
-        savedEvent = { id: 'e_' + Date.now(), clientId, date, time, status, notes };
-        db.events.unshift(savedEvent);
-      }
-      saveDB(); closeModal('modal-event'); renderCalendar();
-      
-      openGoogleCalendar(savedEvent);
-    }
-
-    // Funzione di eliminazione appuntamento collegata al tasto rosso
-    function deleteCurrentEvent() {
-      const id = document.getElementById('event-id').value;
-      if (!id) {
-        alert("Nessun evento da eliminare.");
-        return;
-      }
-      
-      if (confirm("Sei sicuro di voler eliminare questo appuntamento?")) {
-        db.events = db.events.filter(x => x.id !== id);
-        saveDB();
-        closeModal('modal-event');
-        renderCalendar();
-        renderDashboard();
-      }
-    }
-
-    window.onload = function() {
-      newQuote();
-      populateMatrixFilter();
-      renderDashboard();
-      initCloudSync();
-    };
-  </script>
-</body>
-</html>
+      <div class="space-x-3">
+        <button type="button" onclick="closeModal('modal-event')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-yellow-500 text-slate-900 font-semibold text-sm hover:bg-yellow-400 shadow-sm">Salva & Apri in Google Cal</button>
+      </div>
+    </div>
+  </form>
+</div>
