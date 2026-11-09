@@ -670,7 +670,7 @@
     </div>
   </div>
 
-  <!-- MODAL: EVENT -->
+  <!-- MODAL: EVENT (CON TASTO ELIMINA CORRETTO) -->
   <div id="modal-event" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
       <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
@@ -709,9 +709,15 @@
           <label class="block text-xs font-bold text-slate-600 mb-1 uppercase">Note Colloquio / Esigenze Cliente *</label>
           <textarea id="event-notes" required rows="4" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
         </div>
-        <div class="pt-4 flex justify-end space-x-3">
-          <button type="button" onclick="closeModal('modal-event')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-sm">Salva & Apri in Google Cal</button>
+        <div class="pt-4 flex justify-between items-center">
+          <button type="button" onclick="deleteCurrentEvent()" class="px-4 py-2.5 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 shadow-sm">
+            <i class="fa-solid fa-trash mr-1"></i> Elimina
+          </button>
+          
+          <div class="space-x-3">
+            <button type="button" onclick="closeModal('modal-event')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
+            <button type="submit" class="px-5 py-2.5 rounded-xl bg-yellow-500 text-slate-900 font-semibold text-sm hover:bg-yellow-400 shadow-sm">Salva & Apri in Google Cal</button>
+          </div>
         </div>
       </form>
     </div>
@@ -735,15 +741,9 @@
           <textarea id="note-items" rows="5" placeholder="Spedire listino prezzi&#10;Ordinare cataloghi&#10;Verificare bonifico" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-yellow-500 focus:outline-none"></textarea>
           <p class="text-[11px] text-slate-400 mt-1">Ogni riga diventerà un elemento spuntabile nella lista.</p>
         </div>
-     <div class="pt-4 flex justify-between items-center">
-          <button type="button" onclick="deleteCurrentEvent()" class="px-4 py-2.5 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 shadow-sm">
-            <i class="fa-solid fa-trash mr-1"></i> Elimina
-          </button>
-          
-          <div class="space-x-3">
-            <button type="button" onclick="closeModal('modal-event')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
-            <button type="submit" class="px-5 py-2.5 rounded-xl bg-yellow-500 text-slate-900 font-semibold text-sm hover:bg-yellow-400 shadow-sm">Salva & Apri in Google Cal</button>
-          </div>
+        <div class="pt-4 flex justify-end space-x-3">
+          <button type="button" onclick="closeModal('modal-note')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50">Annulla</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-yellow-500 text-slate-900 font-semibold text-sm hover:bg-yellow-400 shadow-sm">Salva Nota</button>
         </div>
       </form>
     </div>
@@ -753,13 +753,13 @@
   <script>
     // Configurazione Firebase Cloud (Sincronizzazione automatica universale)
     const firebaseConfig = {
-  apiKey: "AIzaSyAbamy2sRrHZedyEEU4lrQTlpGYvlXvFyM",
-  authDomain: "agenteprosync.firebaseapp.com",
-  projectId: "agenteprosync",
-  storageBucket: "agenteprosync.firebasestorage.app",
-  messagingSenderId: "286289976431",
-  appId: "1:286289976431:web:9166eed1d056cf4c8f819a"
-};
+      apiKey: "AIzaSyAbamy2sRrHZedyEEU4lrQTlpGYvlXvFyM",
+      authDomain: "agenteprosync.firebaseapp.com",
+      projectId: "agenteprosync",
+      storageBucket: "agenteprosync.firebasestorage.app",
+      messagingSenderId: "286289976431",
+      appId: "1:286289976431:web:9166eed1d056cf4c8f819a"
+    };
 
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
@@ -837,11 +837,10 @@
       });
     }
 
-  function saveDB() {
+    function saveDB() {
       try {
         localStorage.setItem('agentepro_db', JSON.stringify(db));
         
-        // CORRETTO: Punta alla collezione e al documento giusti
         firestore.collection("agente_data").doc("main_store").set(db)
           .then(() => {
             const statusEl = document.getElementById('cloud-status');
@@ -931,7 +930,7 @@
       }
 
       if(window.innerWidth < 768) {
-        toggleSidebar(); // Chiude automaticamente il menu su mobile al click
+        toggleSidebar();
       }
 
       if(tabId === 'dashboard') { populateMatrixFilter(); renderDashboard(); }
@@ -1496,14 +1495,11 @@
       const grid = document.getElementById('calendar-days-grid');
       grid.innerHTML = '';
 
-      // Primo giorno del mese e totale giorni del mese
       const firstDayIndex = new Date(year, month, 1).getDay();
-      // Trasforma la domenica (0) in 7 per avere Lunedì=1 ... Domenica=7
       const startingDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
       const totalDays = new Date(year, month + 1, 0).getDate();
       const prevTotalDays = new Date(year, month, 0).getDate();
 
-      // Giorni vuoti del mese precedente per allineare la griglia
       for (let i = startingDay - 1; i >= 0; i--) {
         const dayNum = prevTotalDays - i;
         grid.innerHTML += `<div class="bg-slate-50/50 border border-slate-100 rounded-lg md:rounded-xl p-1.5 md:p-2 h-24 md:h-32 opacity-40">
@@ -1511,7 +1507,6 @@
         </div>`;
       }
 
-      // Giorni effettivi del mese corrente
       for(let day = 1; day <= totalDays; day++) {
         const monthStr = (month + 1) < 10 ? '0' + (month + 1) : (month + 1);
         const dayStr = day < 10 ? '0' + day : day;
@@ -1527,7 +1522,6 @@
           `;
         }).join('');
 
-        // Evidenzia il giorno odierno se corrisponde
         const todayObj = new Date();
         const isToday = (day === todayObj.getDate() && month === todayObj.getMonth() && year === todayObj.getFullYear());
         const borderClass = isToday ? 'border-blue-500 bg-blue-50/20 ring-2 ring-blue-400/30' : 'border-slate-200 bg-slate-50';
@@ -1731,7 +1725,9 @@
       
       openGoogleCalendar(savedEvent);
     }
-function deleteCurrentEvent() {
+
+    // Funzione di eliminazione appuntamento collegata al tasto rosso
+    function deleteCurrentEvent() {
       const id = document.getElementById('event-id').value;
       if (!id) {
         alert("Nessun evento da eliminare.");
@@ -1746,6 +1742,7 @@ function deleteCurrentEvent() {
         renderDashboard();
       }
     }
+
     window.onload = function() {
       newQuote();
       populateMatrixFilter();
