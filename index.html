@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgentePro Enterprise v12.9 - CRM Plurimandatario</title>
+  <title>AgentePro Enterprise v13.0 - CRM Plurimandatario</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -29,7 +29,7 @@
   <!-- OVERLAY MOBILE PER CHIUDERE IL MENU -->
   <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
 
-  <!-- SIDEBAR NAVIGATION (Responsive a scomparsa) -->
+  <!-- SIDEBAR NAVIGATION -->
   <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 shadow-2xl transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300">
     <div>
       <div class="p-6 border-b border-slate-800 flex items-center justify-between">
@@ -39,7 +39,7 @@
           </div>
           <div>
             <h1 class="font-bold text-white text-lg tracking-wide">AgentePro</h1>
-            <p class="text-xs text-blue-400 font-medium">Enterprise CRM v12.9</p>
+            <p class="text-xs text-blue-400 font-medium">Enterprise CRM v13.0</p>
           </div>
         </div>
         <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white p-2">
@@ -47,7 +47,7 @@
         </button>
       </div>
 
-      <!-- STATO CLOUD SYNC -->
+      <!-- STATO CLOUD SYNC CON BOTTONE RESET CLOUD -->
       <div class="px-6 py-2 bg-slate-950 flex items-center justify-between text-xs border-b border-slate-800">
         <span class="text-slate-400">Cloud Sync:</span>
         <span id="cloud-status" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium flex items-center gap-1">
@@ -55,7 +55,7 @@
         </span>
       </div>
 
-      <nav class="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
+      <nav class="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-260px)] custom-scrollbar">
         <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-medium transition-all text-white bg-blue-600 shadow-md">
           <i class="fa-solid fa-chart-pie w-5 text-lg"></i>
           <span>Dashboard & Target</span>
@@ -100,6 +100,10 @@
           <input type="file" id="import-file" accept=".json" onchange="importBackup(event)" class="hidden">
         </label>
       </div>
+      <button onclick="forceCloudOverwrite()" class="w-full text-[11px] text-yellow-400 hover:text-yellow-300 py-2 border border-yellow-900/50 hover:border-yellow-700 rounded-xl transition-colors flex items-center justify-center space-x-1.5">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <span>Forza Scrittura Cloud</span>
+      </button>
       <button onclick="resetData()" class="w-full text-[11px] text-rose-400 hover:text-rose-300 py-2 border border-rose-900/50 hover:border-rose-700 rounded-xl transition-colors flex items-center justify-center space-x-1.5">
         <i class="fa-solid fa-rotate-left"></i>
         <span>Ripristina Esempio</span>
@@ -109,8 +113,6 @@
 
   <!-- MAIN WORKSPACE -->
   <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100">
-    
-    <!-- HEADER CON PULSANTE MENU MOBILE -->
     <header class="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 text-white p-4 md:p-5 shadow-md flex items-center justify-between shrink-0">
       <div class="flex items-center space-x-3 min-w-0">
         <button onclick="toggleSidebar()" class="md:hidden bg-white/10 hover:bg-white/20 p-2.5 rounded-xl text-white transition-all shrink-0">
@@ -130,9 +132,7 @@
       </button>
     </header>
 
-    <!-- CONTENT CONTAINER -->
     <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar">
-
       <!-- DASHBOARD TAB -->
       <section id="tab-dashboard" class="space-y-6">
         <div class="flex flex-wrap items-center justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
@@ -154,7 +154,6 @@
               <span>Imposta Target</span>
             </button>
 
-            <!-- DASHBOARD FILTERS -->
             <div class="flex flex-wrap items-center gap-2">
               <select id="dash-province" onchange="renderDashboard()" class="border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option value="ALL">Tutte le Province</option>
@@ -184,7 +183,6 @@
           </div>
         </div>
 
-        <!-- TARGET & OBIETTIVI PROGRESS SECTION -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
             <div class="flex justify-between items-center">
@@ -215,7 +213,6 @@
           </div>
         </div>
 
-        <!-- STATS CARDS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
             <div class="bg-blue-100 text-blue-600 p-4 rounded-2xl text-xl"><i class="fa-solid fa-chart-line"></i></div>
@@ -247,7 +244,6 @@
           </div>
         </div>
 
-        <!-- ANALYTICS TABLES GRID -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <div class="flex justify-between items-center">
@@ -302,7 +298,6 @@
           </div>
         </div>
 
-        <!-- MATRIX TABLE -->
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
           <div class="flex flex-wrap justify-between items-center gap-3">
             <h3 class="font-bold text-slate-900 text-base flex items-center">
@@ -335,7 +330,7 @@
         </div>
       </section>
 
-      <!-- PRE-VISIT HUB TAB -->
+      <!-- PRE-VISIT TAB -->
       <section id="tab-previsit" class="space-y-6 hidden">
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
           <div>
@@ -462,7 +457,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="mandates-grid"></div>
       </section>
 
-      <!-- CALENDAR TAB (LAYOUT RESPONSIVE MOBILE PERFETTO) -->
+      <!-- CALENDAR TAB -->
       <section id="tab-calendar" class="space-y-6 hidden">
         <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
           <div>
@@ -478,7 +473,6 @@
         </div>
 
         <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
-          <!-- CONTROLLI VELOCI MESE ED ANNO -->
           <div class="flex flex-wrap justify-between items-center gap-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
             <div class="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-start">
               <button onclick="changeMonth(-1)" class="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition-colors shadow-sm">
@@ -487,27 +481,15 @@
 
               <div class="flex items-center space-x-2">
                 <select id="cal-month-select" onchange="jumpToMonthYear()" class="border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm">
-                  <option value="0">Gennaio</option>
-                  <option value="1">Febbraio</option>
-                  <option value="2">Marzo</option>
-                  <option value="3">Aprile</option>
-                  <option value="4">Maggio</option>
-                  <option value="5">Giugno</option>
-                  <option value="6">Luglio</option>
-                  <option value="7">Agosto</option>
-                  <option value="8">Settembre</option>
-                  <option value="9">Ottobre</option>
-                  <option value="10">Novembre</option>
-                  <option value="11">Dicembre</option>
+                  <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option>
+                  <option value="3">Aprile</option><option value="4">Maggio</option><option value="5">Giugno</option>
+                  <option value="6">Luglio</option><option value="7">Agosto</option><option value="8">Settembre</option>
+                  <option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
                 </select>
 
                 <select id="cal-year-select" onchange="jumpToMonthYear()" class="border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm">
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
-                  <option value="2028">2028</option>
-                  <option value="2029">2029</option>
-                  <option value="2030">2030</option>
+                  <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+                  <option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option>
                 </select>
               </div>
 
@@ -523,17 +505,15 @@
             </div>
           </div>
 
-          <!-- TESTATA GIORNI SETTIMANA (Solo per vista desktop) -->
           <div class="hidden md:grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
             <div>LUN</div><div>MAR</div><div>MER</div><div>GIO</div><div>VEN</div><div>SAB</div><div>DOM</div>
           </div>
           
-          <!-- CONTENITORE GRIGLIA / LISTA -->
           <div id="calendar-days-grid" class="space-y-3 md:space-y-0 md:grid md:grid-cols-7 md:gap-3"></div>
         </div>
       </section>
 
-      <!-- NOTES & TASK TAB (KEEP STYLE) -->
+      <!-- NOTES TAB -->
       <section id="tab-notes" class="space-y-6 hidden">
         <div class="flex flex-wrap justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
           <div>
@@ -548,12 +528,10 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="notes-grid"></div>
       </section>
-
     </div>
   </main>
 
   <!-- MODALS -->
-  <!-- MODAL: TARGET -->
   <div id="modal-target" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
       <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
@@ -577,7 +555,6 @@
     </div>
   </div>
 
-  <!-- MODAL: MANDATE -->
   <div id="modal-mandate" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
       <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
@@ -602,7 +579,6 @@
     </div>
   </div>
 
-  <!-- MODAL: CLIENT -->
   <div id="modal-client" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
       <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
@@ -662,7 +638,6 @@
     </div>
   </div>
 
-  <!-- MODAL: ORDER -->
   <div id="modal-order" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
       <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
@@ -706,7 +681,6 @@
     </div>
   </div>
 
-  <!-- MODAL: EVENT (CON TASTO ELIMINA ROSSO INTEGRATO) -->
   <div id="modal-event" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
       <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
@@ -759,7 +733,6 @@
     </div>
   </div>
 
-  <!-- MODAL: NOTE / TASK (KEEP) -->
   <div id="modal-note" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
       <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
@@ -785,9 +758,8 @@
     </div>
   </div>
 
-  <!-- SCRIPT LOGIC -->
+  <!-- SCRIPT LOGIC CON GESTIONE SICURA FIREBASE & RECOVERY -->
   <script>
-    // Configurazione Firebase Cloud
     const firebaseConfig = {
       apiKey: "AIzaSyAbamy2sRrHZedyEEU4lrQTlpGYvlXvFyM",
       authDomain: "agenteprosync.firebaseapp.com",
@@ -841,7 +813,9 @@
       { quote: "Non vendere prodotti, vendi soluzioni ai problemi del tuo cliente.", author: "Maestro di Vendita" }
     ];
 
-    let db = defaultData;
+    // Carica dati salvati in locale se disponibili
+    let localSaved = localStorage.getItem('agentepro_db');
+    let db = localSaved ? JSON.parse(localSaved) : defaultData;
     let currentCalendarDate = new Date();
 
     function toggleSidebar() {
@@ -851,27 +825,33 @@
       overlay.classList.toggle('hidden');
     }
 
+    // SINCRONIZZAZIONE INTELLIGENTE FIREBASE
     function initCloudSync() {
-      firestore.collection("agente_data").doc("main_store").onSnapshot((doc) => {
+      firestore.collection("agente_data").doc("main_store").get().then((doc) => {
         if (doc.exists) {
           const cloudData = doc.data();
-          if (cloudData && cloudData.clients && cloudData.mandates) {
+          if (cloudData && cloudData.clients && cloudData.clients.length > 0) {
             db = cloudData;
-            if(!db.targets) db.targets = { annual: 200000, monthly: 18000 };
-            if(!db.notes) db.notes = [];
-            populateDashboardFilters();
-            refreshActiveTab();
-            document.getElementById('cloud-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
+            localStorage.setItem('agentepro_db', JSON.stringify(db));
+          } else {
+            // Se il Cloud è vuoto o corrotto, sovrascrivi con i dati locali giusti!
+            forceCloudOverwrite();
           }
         } else {
-          saveDB();
+          forceCloudOverwrite();
         }
-      }, (error) => {
-        console.error("Errore sync Cloud:", error);
-        document.getElementById('cloud-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> Offline (Locale)';
+        populateDashboardFilters();
+        refreshActiveTab();
+        document.getElementById('cloud-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
+      }).catch((error) => {
+        console.error("Firebase offline:", error);
+        document.getElementById('cloud-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> Locale (Offline)';
+        populateDashboardFilters();
+        refreshActiveTab();
       });
     }
 
+    // SALVAGGIO LOCALE E FORCE UPLOAD CLOUD
     function saveDB() {
       try {
         localStorage.setItem('agentepro_db', JSON.stringify(db));
@@ -881,13 +861,25 @@
             if(statusEl) statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizzato';
           })
           .catch((err) => {
-            console.error("Errore salvataggio Cloud:", err);
+            console.warn("Upload temporaneamente non disponibile:", err);
             const statusEl = document.getElementById('cloud-status');
-            if(statusEl) statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Errore Sync';
+            if(statusEl) statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> Salvato Locale';
           });
       } catch(e) {
-        console.error("Errore locale:", e);
+        console.error("Errore salvataggio:", e);
       }
+    }
+
+    function forceCloudOverwrite() {
+      localStorage.setItem('agentepro_db', JSON.stringify(db));
+      firestore.collection("agente_data").doc("main_store").set(db)
+        .then(() => {
+          alert("Dati sovrascritti e sincronizzati con successo sul Cloud!");
+          location.reload();
+        })
+        .catch((err) => {
+          alert("Impossibile contattare il Cloud al momento. I dati restano salvati in locale.");
+        });
     }
 
     function refreshActiveTab() {
@@ -924,13 +916,13 @@
               db = imported;
               if(!db.notes) db.notes = [];
               saveDB();
-              alert("Backup importato con successo nel Cloud e sincronizzato!");
-              location.reload();
+              alert("Backup caricato con successo! Sincronizzazione Cloud completata.");
+              refreshActiveTab();
             } else {
-              alert("Il file selezionato non è un formato di backup valido.");
+              alert("File di backup non valido.");
             }
           } catch(ex) {
-            alert("Errore durante la lettura del file di backup.");
+            alert("Errore durante l'importazione.");
           }
         };
       }
@@ -1515,7 +1507,7 @@
       }
     }
 
-    // CALENDARIO RESPONSIVE CON VISTA LISTA SU MOBILE E GRIGLIA SU DESKTOP
+    // CALENDARIO RESPONSIVE
     const weekDayNamesShort = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
 
     function changeMonth(direction) {
@@ -1552,7 +1544,6 @@
       const totalDays = new Date(year, month + 1, 0).getDate();
 
       if (isMobile) {
-        // VISTA MOBILE: LISTA GIORNO PER GIORNO ORIZZONTALE E BEN LEGGIBILE
         for (let day = 1; day <= totalDays; day++) {
           const monthStr = (month + 1) < 10 ? '0' + (month + 1) : (month + 1);
           const dayStr = day < 10 ? '0' + day : day;
@@ -1602,7 +1593,6 @@
           `;
         }
       } else {
-        // VISTA DESKTOP: CLASSICA GRIGLIA A 7 COLONNE
         const firstDayIndex = new Date(year, month, 1).getDay();
         const startingDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
         const prevTotalDays = new Date(year, month, 0).getDate();
@@ -1860,9 +1850,6 @@
 
     window.onload = function() {
       newQuote();
-      populateDashboardFilters();
-      populateMatrixFilter();
-      renderDashboard();
       initCloudSync();
     };
   </script>
